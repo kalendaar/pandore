@@ -2,6 +2,10 @@ This patch modifies the core so it populates the auction houses with items. It m
 Items and prices are chosen randomly based on the parameters you define. If an auction expires, auctions are deleted quietly.
 AHBot will no longer buy it's own items, and will not receive mail from the AH or get returned mail.
 
+AHBot has it's own repo for both Mangos and Trinity now, and the Install
+directions below do not apply to them. (unless you are using the older
+revisions)
+
 ===================================================================
 ~~HOW TO INSTALL~~
 ===================================================================
