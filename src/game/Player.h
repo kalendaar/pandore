@@ -1912,6 +1912,11 @@ class MANGOS_DLL_SPEC Player : public Unit
         MovementInfo m_movementInfo;
         uint32 m_lastFallTime;
         float  m_lastFallZ;
+        void SetFallInformation(uint32 time, float z)
+        {
+            m_lastFallTime = time;
+            m_lastFallZ = z;
+        }
         bool isMoving() const { return HasUnitMovementFlag(movementFlagsMask); }
         bool isMovingOrTurning() const { return HasUnitMovementFlag(movementOrTurningFlagsMask); }
 
@@ -2021,6 +2026,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint64 GetAuraUpdateMask() { return m_auraUpdateMask; }
         void SetAuraUpdateMask(uint8 slot) { m_auraUpdateMask |= (uint64(1) << slot); }
         Player* GetNextRandomRaidMember(float radius);
+        PartyResult CanUninviteFromGroup() const;
 
         GridReference<Player> &GetGridRef() { return m_gridRef; }
         MapReference &GetMapRef() { return m_mapRef; }
