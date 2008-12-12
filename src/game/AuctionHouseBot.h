@@ -21,11 +21,13 @@
 #define AHBplayerAccount sConfig.GetIntDefault("AuctionHouseBot.Account", 0)
 #define AHBplayerGUID sConfig.GetIntDefault("AuctionHouseBot.GUID", 0)
 #define ItemsPerCycle sConfig.GetIntDefault("AuctionHouseBot.ItemsPerCycle", 200)
+#define SellMethod sConfig.GetIntDefault("AuctionHouseBot.UseBuyPriceForSeller", 1)
+#define BuyMethod sConfig.GetIntDefault("AuctionHouseBot.UseBuyPriceForBuyer", 0)
 
-class AHBConfig 
+class AHBConfig
 {
    private:
-     uint32 AHID; 
+     uint32 AHID;
 	 uint32 minItems;
 	 uint32 maxItems;
 	 uint32 minTime;
@@ -75,13 +77,13 @@ class AHBConfig
 	 uint32 gip;
 	 uint32 bip;
 	 uint32 pip;
-    public: 
-    AHBConfig(uint32 ahid) 
-     { 
+    public:
+    AHBConfig(uint32 ahid)
+     {
 		 AHID = ahid;
      }
-     AHBConfig() 
-     { 
+     AHBConfig()
+     {
      }
 	 uint32 GetAHID()
 	 {
@@ -676,7 +678,7 @@ class AHBConfig
 	 }
    ~AHBConfig()
    {
-   } 
+   }
 };
 void AuctionHouseBot();
 void AuctionHouseBotInit();

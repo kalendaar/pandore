@@ -2,10 +2,6 @@ This patch modifies the core so it populates the auction houses with items. It m
 Items and prices are chosen randomly based on the parameters you define. If an auction expires, auctions are deleted quietly.
 AHBot will no longer buy it's own items, and will not receive mail from the AH or get returned mail.
 
-AHBot has it's own repo for both Mangos and Trinity now, and the Install
-directions below do not apply to them. (unless you are using the older
-revisions)
-
 ===================================================================
 ~~HOW TO INSTALL~~
 ===================================================================
@@ -35,23 +31,37 @@ Step 4.) Log in at least once with this character.(Do not change the configurati
 Step 5.) Tune the configuration options in the configuration file and the Database.
 
 #These are the settings in the configuration file:
-AuctionHouseBot.Seller = 0
-AuctionHouseBot.Buyer = 0
+AuctionHouseBot.EnableSeller = 0
+AuctionHouseBot.EnableBuyer = 0
 AuctionHouseBot.Account = 0
 AuctionHouseBot.GUID = 0
 AuctionHouseBot.VendorItems = 0
 AuctionHouseBot.LootItems = 1
 AuctionHouseBot.OtherItems = 0
+AuctionHouseBot.No_Bind = 1
+AuctionHouseBot.Bind_When_Picked_Up = 0
+AuctionHouseBot.Bind_When_Equipped = 1
+AuctionHouseBot.Bind_When_Use = 1
+AuctionHouseBot.Bind_Quest_Item = 0
 AuctionHouseBot.ItemsPerCycle = 200
+AuctionHouseBot.UseBuyPriceForSeller = 0
+AuctionHouseBot.UseBuyPriceForBuyer = 0
 
-AuctionHouseBot.Seller enables (1) or disables (0) the Seller part of the Bot
-AuctionHouseBot.Buyer enables (1) or disables (0) the Buyer part of the Bot
+AuctionHouseBot.EnableSeller enables (1) or disables (0) the Seller part of the Bot
+AuctionHouseBot.EnableBuyer enables (1) or disables (0) the Buyer part of the Bot
 AuctionHouseBot.Account is the account number (in realmd->account table) of the player you want to run as the auction bot. Note: a value of 0 will disable the bot.
 AuctionHouseBot.GUID is the GUID (in characters->characters table) of the player you want to run as the auction bot. Note: a value of 0 will disable the bot.
 AuctionHouseBot.VendorItems is a boolean value (0 or 1) that indicates whether to include Vendor only items
 AuctionHouseBot.LootItems  is a boolean value (0 or 1) that indicates whether to include Loot/Fish/Skin/etc. only items
 AuctionHouseBot.OtherItems  is a boolean value (0 or 1) that indicates whether to include Other items not covered by the first 2
+AuctionHouseBot.No_Bind is a boolean value (0 or 1) that indicates whether to include items with a bonding of 0
+AuctionHouseBot.Bind_When_Picked_Up = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 1
+AuctionHouseBot.Bind_When_Equipped = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 2
+AuctionHouseBot.Bind_When_Use = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 3
+AuctionHouseBot.Bind_Quest_Item = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 4
 AuctionHouseBot.ItemsPerCycle determines how many items are added each time AHBot is run (once per minute, by default)
+AuctionHouseBot.UseBuyPriceForSeller Should the Seller use BuyPrice or SellPrice to determine Bid Prices
+AuctionHouseBot.UseBuyPriceForBuyer Should the Buyer use BuyPrice or SellPrice to determine Bid Prices
 
 #These are the settings in the Database:
 #Each Auctionhouse has it's own set of these
@@ -72,30 +82,30 @@ PercentPurpleItems = 2
 
 MinPriceWhite = 150
 MaxPriceWhite = 250
-MinBidPriceWhite = 100
+MinBidPriceWhite = 70
 MaxBidPriceWhite = 100
 MaxStackWhite = 0
-MinPriceGreen = 150
-MaxPriceGreen = 250
-MinBidPriceGreen = 100
+MinPriceGreen = 800
+MaxPriceGreen = 1400
+MinBidPriceGreen = 80
 MaxBidPriceGreen = 100
 MaxStackGreen = 3
-MinPriceBlue = 150
-MaxPriceBlue = 250
-MinBidPriceBlue = 100
+MinPriceBlue = 1250
+MaxPriceBlue = 1750
+MinBidPriceBlue = 75
 MaxBidPriceBlue = 100
 MaxStackBlue = 2
-MinPricePurple = 150
-MaxPricePurple = 250
-MinBidPricePurple = 100
+MinPricePurple = 2250
+MaxPricePurple = 4550
+MinBidPricePurple = 80
 MaxBidPricePurple = 100
 MaxStackPurple = 1
 
 BuyerPriceGrey = 1
-BuyerPriceWhite = 2
-BuyerPriceGreen = 2
-BuyerPriceBlue = 2
-BuyerPricePurple = 2
+BuyerPriceWhite = 1
+BuyerPriceGreen = 5
+BuyerPriceBlue = 12
+BuyerPricePurple = 15
 BuyerBiddingInterval = 1
 BuyerBidsPerInterval = 1
 
@@ -145,6 +155,7 @@ BuyerPriceBlue
 BuyerPricePurple
 
 BuyerBiddingInterval is the time (in minutes) between bids.
+BuyerBidsPerInterval is the number of bids the buyer will make in a cycle
 
 How to use ahcommands from the console (CLI) or in game with GM level 3 players:
 ahbotoptions - will display usage instructions
@@ -155,12 +166,15 @@ minitems - will set the minimum number of items in the AH before it starts being
 maxitems - will set the maximum number of items in the AH.
 mintime - will set the minimum time (in hours) for auctions to expire.
 maxtime - will set the maximum time (in hours) for auctions to expire.
+percentages - will set the percentage of each quality in the AH
 minprice - will set the minimum price multiplier for auctions.
 maxprice - will set the maximum price multiplier for auctions.
-bidprice - will set the starting bid as a percent of the buyout price for auctions.
+minbidprice - will set the minimum starting bid as a percent of the buyout price for auctions.
+maxbidprice - will set the maximum starting bid as a percent of the buyout price for auctions.
 maxstack - will set the maximum number of items in stacks for auctions. 0 will set the maximum to the maximum for that item type.
 buyerprice - will set the bid price multiplier for auctions.
 biddinginterval - will set the number of minutes between bids on auctions.
+bidsperinterval - will set the number of bids to enter per cycle.
 
 The auction house IDs are:
 2 - Alliance

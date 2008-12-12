@@ -1143,7 +1143,7 @@ Ra.Secure = 1
 #        Enable/Disable the part of AHBot that puts items up for auction
 #    Default 0 (disabled)
 #
-#    AuctionHouseBot.EnableSeller
+#    AuctionHouseBot.EnableBuyer
 #        Enable/Disable the part of AHBot that buys items from players
 #    Default 0 (disabled)
 #
@@ -1164,6 +1164,31 @@ Ra.Secure = 1
 #        Include misc. items.
 #    Default 0
 #
+#    AuctionHouseBot.Bonding_types
+#        Indicates which bonding types to allow seller to put up for auction
+#            No_Bind
+#             Default 1
+#            Bind_When_Picked_Up
+#             Default 0
+#            Bind_When_Equipped
+#             Default 1
+#            Bind_When_Use
+#             Default 1
+#            Bind_Quest_Item
+#             Default 0
+#              
+#    AuctionHouseBot.ItemsPerCycle
+#        Number of Items to Add/Remove from the AH during mass operations
+#    Default 200
+#
+#    AuctionHouseBot.UseBuyPriceForSeller
+#        Should the Seller use BuyPrice or SellPrice to determine Bid Prices
+#    Default 0 (use BuyPrice)
+#
+#    AuctionHouseBot.UseBuyPriceForBuyer
+#        Should the Buyer use BuyPrice or SellPrice to determine Bid Prices
+#    Default 0 (use SellPrice)
+#
 #    All other settings have been moved to sql
 #
 ###################################################################################################################
@@ -1175,4 +1200,11 @@ AuctionHouseBot.GUID = 0
 AuctionHouseBot.VendorItems = 0
 AuctionHouseBot.LootItems = 1
 AuctionHouseBot.OtherItems = 0
+AuctionHouseBot.No_Bind = 1
+AuctionHouseBot.Bind_When_Picked_Up = 0
+AuctionHouseBot.Bind_When_Equipped = 1
+AuctionHouseBot.Bind_When_Use = 1
+AuctionHouseBot.Bind_Quest_Item = 0
 AuctionHouseBot.ItemsPerCycle = 200
+AuctionHouseBot.UseBuyPriceForSeller = 0
+AuctionHouseBot.UseBuyPriceForBuyer = 0

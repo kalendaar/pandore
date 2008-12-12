@@ -95,6 +95,7 @@ class ChatHandler
         bool HandleAccountSetPasswordCommand(const char* args);
 
         bool HandleHelpCommand(const char* args);
+        bool HandleAHBotOptionsCommand(const char * args);
         bool HandleCommandsCommand(const char* args);
         bool HandleStartCommand(const char* args);
         bool HandleDismountCommand(const char* args);
@@ -414,7 +415,6 @@ class ChatHandler
         bool HandleCastTargetCommand(const char *args);
         bool HandleComeToMeCommand(const char *args);
         bool HandleCombatStopCommand(const char *args);
-        bool HandleAHBotOptionsCommand(const char * args);
         bool HandleSendMessageCommand(const char * args);
         bool HandleRepairitemsCommand(const char* args);
         bool HandleWaterwalkCommand(const char* args);
