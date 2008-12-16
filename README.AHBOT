@@ -3,7 +3,7 @@ Items and prices are chosen randomly based on the parameters you define. If an a
 AHBot will no longer buy it's own items, and will not receive mail from the AH or get returned mail.
 
 ===================================================================
-~~HOW TO INSTALL~~
+~~HOW TO INSTALL~~ (Deprecated)
 ===================================================================
 1. Copying Auctionhousebot.h and auctionhouse.cpp from AHBot/trunk to src/game is no longer necessary.
 2. Patch using AH Bot patch file from the proper subdirectory
@@ -60,8 +60,8 @@ AuctionHouseBot.Bind_When_Equipped = is a boolean value (0 or 1) that indicates 
 AuctionHouseBot.Bind_When_Use = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 3
 AuctionHouseBot.Bind_Quest_Item = is a boolean value (0 or 1) that indicates whether to include items with a bonding of 4
 AuctionHouseBot.ItemsPerCycle determines how many items are added each time AHBot is run (once per minute, by default)
-AuctionHouseBot.UseBuyPriceForSeller Should the Seller use BuyPrice or SellPrice to determine Bid Prices
-AuctionHouseBot.UseBuyPriceForBuyer Should the Buyer use BuyPrice or SellPrice to determine Bid Prices
+AuctionHouseBot.UseBuyPriceForSeller Use SellPrice (0) or BuyPrice (1) for determining prices
+AuctionHouseBot.UseBuyPriceForBuyer Use SellPrice (0) or BuyPrice (1) for determining prices
 
 #These are the settings in the Database:
 #Each Auctionhouse has it's own set of these

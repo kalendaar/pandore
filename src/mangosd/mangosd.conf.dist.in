@@ -1225,7 +1225,7 @@ Ra.Secure = 1
 #
 #    AuctionHouseBot.UseBuyPriceForSeller
 #        Should the Seller use BuyPrice or SellPrice to determine Bid Prices
-#    Default 0 (use BuyPrice)
+#    Default 0 (use SellPrice)
 #
 #    AuctionHouseBot.UseBuyPriceForBuyer
 #        Should the Buyer use BuyPrice or SellPrice to determine Bid Prices
