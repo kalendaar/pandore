@@ -157,6 +157,7 @@ class ChatHandler
         bool HandleModifyHPCommand(const char* args);
         bool HandleModifyManaCommand(const char* args);
         bool HandleModifyRageCommand(const char* args);
+        bool HandleModifyRunicPowerCommand(const char* args);
         bool HandleModifyEnergyCommand(const char* args);
         bool HandleModifyMoneyCommand(const char* args);
         bool HandleModifyASpeedCommand(const char* args);
@@ -196,7 +197,6 @@ class ChatHandler
         bool HandleNpcWhisperCommand(const char* args);
         bool HandleNpcYellCommand(const char* args);
 
-        bool HandleReloadCommand(const char* args);
         bool HandleReloadAllCommand(const char* args);
         bool HandleReloadAllAreaCommand(const char* args);
         bool HandleReloadAllItemCommand(const char* args);
