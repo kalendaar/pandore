@@ -280,7 +280,7 @@ enum ItemQualities
 #define SPELL_ATTR_EX2_UNK2                       0x00000004            // 2
 #define SPELL_ATTR_EX2_UNK3                       0x00000008            // 3
 #define SPELL_ATTR_EX2_UNK4                       0x00000010            // 4
-#define SPELL_ATTR_EX2_UNK5                       0x00000020            // 5
+#define SPELL_ATTR_EX2_AUTOREPEAT_FLAG            0x00000020            // 5
 #define SPELL_ATTR_EX2_UNK6                       0x00000040            // 6
 #define SPELL_ATTR_EX2_UNK7                       0x00000080            // 7
 #define SPELL_ATTR_EX2_UNK8                       0x00000100            // 8 not set in 3.0.3
@@ -707,7 +707,7 @@ enum AuraState
     //AURA_STATE_UNKNOWN20                  = 20,           //  c  | only (45317 Suicide)
     //AURA_STATE_UNKNOWN21                  = 21,           //     | not used
     //AURA_STATE_UNKNOWN22                  = 22,           // C   | not implemented yet (Requires Evasive Charges to use)
-    AURA_STATE_HEALTH_ABOVE_75_PERCENT      = 23,           // C   | not implemented yet
+    AURA_STATE_HEALTH_ABOVE_75_PERCENT      = 23,           // C   |
 };
 
 // Spell mechanics
@@ -2076,6 +2076,7 @@ enum SummonType
     SUMMON_TYPE_UNKNOWN5    = 409,
     SUMMON_TYPE_UNKNOWN2    = 427,
     SUMMON_TYPE_POSESSED2   = 428,
+    SUMMON_TYPE_FORCE_OF_NATURE = 669,
     SUMMON_TYPE_GUARDIAN2   = 1161
 };
 

@@ -417,9 +417,8 @@ inline bool isSpellBreakStealth(SpellEntry const* spellInfo)
 
 inline bool IsAutoRepeatRangedSpell(SpellEntry const* spellInfo)
 {
-    return (spellInfo->Attributes & SPELL_ATTR_RANGED) && (spellInfo->AttributesEx2 == 0x000020 /*autorepeat*/);
+    return (spellInfo->Attributes & SPELL_ATTR_RANGED) && (spellInfo->AttributesEx2 & SPELL_ATTR_EX2_AUTOREPEAT_FLAG);
 }
-
 
 uint8 GetErrorAtShapeshiftedCast (SpellEntry const *spellInfo, uint32 form);
 
@@ -445,6 +444,17 @@ inline uint32 GetSpellMechanicMask(SpellEntry const* spellInfo, int32 effect)
         mask |= 1<<spellInfo->Mechanic;
     if (spellInfo->EffectMechanic[effect])
         mask |= 1<<spellInfo->EffectMechanic[effect];
+    return mask;
+}
+
+inline uint32 GetAllSpellMechanicMask(SpellEntry const* spellInfo)
+{
+    uint32 mask = 0;
+    if (spellInfo->Mechanic)
+        mask |= 1<<spellInfo->Mechanic;
+    for (int i=0; i< 3; ++i)
+        if (spellInfo->EffectMechanic[i])
+            mask |= 1<<spellInfo->EffectMechanic[i];
     return mask;
 }
 
