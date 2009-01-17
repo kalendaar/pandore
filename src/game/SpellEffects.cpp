@@ -721,12 +721,6 @@ void Spell::EffectDummy(uint32 i)
                     m_caster->CastCustomSpell(unitTarget, 12721, &deepWoundsDotBasePoints0, NULL, NULL, true, NULL);
                     return;
                 }
-                case 12975:                                 //Last Stand
-                {
-                    int32 healthModSpellBasePoints0 = int32(m_caster->GetMaxHealth()*0.3);
-                    m_caster->CastCustomSpell(m_caster, 12976, &healthModSpellBasePoints0, NULL, NULL, true, NULL);
-                    return;
-                }
                 case 13120:                                 // net-o-matic
                 {
                     if(!unitTarget)
@@ -1276,13 +1270,23 @@ void Spell::EffectDummy(uint32 i)
                 m_caster->SetPower(POWER_RAGE,0);
                 return;
             }
-            if(m_spellInfo->Id==21977)                      //Warrior's Wrath
+            switch(m_spellInfo->Id)
             {
-                if(!unitTarget)
+                // Warrior's Wrath
+                case 21977:
+                {
+                    if(!unitTarget)
+                        return;
+                    m_caster->CastSpell(unitTarget,21887,true); // spell mod
                     return;
-
-                m_caster->CastSpell(unitTarget,21887,true); // spell mod
-                return;
+                }
+                // Last Stand
+                case 12975:
+                {
+                    int32 healthModSpellBasePoints0 = int32(m_caster->GetMaxHealth()*0.3);
+                    m_caster->CastCustomSpell(m_caster, 12976, &healthModSpellBasePoints0, NULL, NULL, true, NULL);
+                    return;
+                }
             }
             break;
         case SPELLFAMILY_WARLOCK:
@@ -3803,35 +3807,34 @@ void Spell::EffectEnchantItemPerm(uint32 i)
 
     p_caster->UpdateCraftSkill(m_spellInfo->Id);
 
-    if (m_spellInfo->EffectMiscValue[i])
+    uint32 enchant_id = m_spellInfo->EffectMiscValue[i];
+    if (!enchant_id)
+        return;
+
+    SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
+    if(!pEnchant)
+        return;
+
+    // item can be in trade slot and have owner diff. from caster
+    Player* item_owner = itemTarget->GetOwner();
+    if(!item_owner)
+        return;
+
+    if(item_owner!=p_caster && p_caster->GetSession()->GetSecurity() > SEC_PLAYER && sWorld.getConfig(CONFIG_GM_LOG_TRADE) )
     {
-        uint32 enchant_id = m_spellInfo->EffectMiscValue[i];
-
-        SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
-        if(!pEnchant)
-            return;
-
-        // item can be in trade slot and have owner diff. from caster
-        Player* item_owner = itemTarget->GetOwner();
-        if(!item_owner)
-            return;
-
-        if(item_owner!=p_caster && p_caster->GetSession()->GetSecurity() > SEC_PLAYER && sWorld.getConfig(CONFIG_GM_LOG_TRADE) )
-        {
-            sLog.outCommand(p_caster->GetSession()->GetAccountId(),"GM %s (Account: %u) enchanting(perm): %s (Entry: %d) for player: %s (Account: %u)",
-                p_caster->GetName(),p_caster->GetSession()->GetAccountId(),
-                itemTarget->GetProto()->Name1,itemTarget->GetEntry(),
-                item_owner->GetName(),item_owner->GetSession()->GetAccountId());
-        }
-
-        // remove old enchanting before applying new if equipped
-        item_owner->ApplyEnchantment(itemTarget,PERM_ENCHANTMENT_SLOT,false);
-
-        itemTarget->SetEnchantment(PERM_ENCHANTMENT_SLOT, enchant_id, 0, 0);
-
-        // add new enchanting if equipped
-        item_owner->ApplyEnchantment(itemTarget,PERM_ENCHANTMENT_SLOT,true);
+        sLog.outCommand(p_caster->GetSession()->GetAccountId(),"GM %s (Account: %u) enchanting(perm): %s (Entry: %d) for player: %s (Account: %u)",
+            p_caster->GetName(),p_caster->GetSession()->GetAccountId(),
+            itemTarget->GetProto()->Name1,itemTarget->GetEntry(),
+            item_owner->GetName(),item_owner->GetSession()->GetAccountId());
     }
+
+    // remove old enchanting before applying new if equipped
+    item_owner->ApplyEnchantment(itemTarget,PERM_ENCHANTMENT_SLOT,false);
+
+    itemTarget->SetEnchantment(PERM_ENCHANTMENT_SLOT, enchant_id, 0, 0);
+
+    // add new enchanting if equipped
+    item_owner->ApplyEnchantment(itemTarget,PERM_ENCHANTMENT_SLOT,true);
 }
 
 void Spell::EffectEnchantItemTmp(uint32 i)
@@ -5021,8 +5024,6 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                 SpellEntry const *judge = sSpellStore.LookupEntry(spellId2);
                 if (!judge)
                     continue;
-                 // found, remove seal
-                m_caster->RemoveAurasDueToSpell(spellInfo->Id);
                 break;
             }
             if (spellId1)
