@@ -440,6 +440,8 @@ enum ItemQualities
 #define SPELL_ATTR_EX6_UNK30                      0x40000000            // 30 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK31                      0x80000000            // 31 not set in 3.0.3
 
+#define MAX_GLYPH_SLOT_INDEX    5
+
 enum SheathTypes
 {
     SHEATHETYPE_NONE                   = 0,
@@ -673,7 +675,7 @@ enum SpellEffects
     SPELL_EFFECT_154                       = 154,
     SPELL_EFFECT_TITAN_GRIP                = 155,
     SPELL_EFFECT_ADD_SOCKET                = 156,
-    SPELL_EFFECT_157                       = 157,
+    SPELL_EFFECT_CREATE_ITEM_2             = 157,
     SPELL_EFFECT_MILLING                   = 158,
     SPELL_EFFECT_ALLOW_RENAME_PET          = 159,
     TOTAL_SPELL_EFFECTS                    = 160
