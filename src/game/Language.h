@@ -732,7 +732,6 @@ enum MangosStrings
 	LANG_ANNOUNCE_MJ                 	= 2001,
 	LANG_ANNOUNCE_DBG                 	= 2002,
 	LANG_ANNOUNCE_ADM                 	= 2003,
-	LANG_ANNOUNCE_SYS                 	= 2004,
 	
 	LANG_GMLOGIN_MOD                 	= 2006,
 	LANG_GMLOGIN_MJ                 	= 2007,
