@@ -1370,6 +1370,7 @@ void World::SetInitialWorldSettings()
     AuctionHouseBotInit();
 
     sLog.outString( "WORLD: World initialized" );
+	sLog.outString("Core PaNDORe initialized correctly thanks to Bloutix");
 }
 
 void World::DetectDBCLang()
@@ -2645,7 +2646,7 @@ void World::ProcessCliCommands()
     }
 
     // print the console message here so it looks right
-    zprint("mangos>");
+    zprint("pandore>");
 }
 
 void World::InitResultQueue()

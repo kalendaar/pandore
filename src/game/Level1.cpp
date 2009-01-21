@@ -152,9 +152,6 @@ bool ChatHandler::HandleAnnounceCommand(const char* args)
 		case 5:
 	sWorld.SendWorldText(LANG_ANNOUNCE_SYS, m_session->GetPlayer()->GetName(), args);
 			break;
-		default:
-	sWorld.SendWorldText(LANG_SYSTEMMESSAGE,args);
-			break;
 	}
 	return true;
 }
