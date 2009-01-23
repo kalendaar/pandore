@@ -675,7 +675,7 @@ enum SpellEffects
     SPELL_EFFECT_154                       = 154,
     SPELL_EFFECT_TITAN_GRIP                = 155,
     SPELL_EFFECT_ADD_SOCKET                = 156,
-    SPELL_EFFECT_157                       = 157,
+    SPELL_EFFECT_CREATE_ITEM_2             = 157,
     SPELL_EFFECT_MILLING                   = 158,
     SPELL_EFFECT_ALLOW_RENAME_PET          = 159,
     TOTAL_SPELL_EFFECTS                    = 160
@@ -838,6 +838,7 @@ enum Targets
     TARGET_AREAEFFECT_PARTY_AND_CLASS  = 61,
     TARGET_DUELVSPLAYER_COORDINATES    = 63,
     TARGET_BEHIND_VICTIM               = 65,                // uses in teleport behind spells
+    TARGET_DYNAMIC_OBJECT_COORDINATES  = 76,
     TARGET_SINGLE_ENEMY                = 77,
     TARGET_SELF2                       = 87,
     TARGET_NONCOMBAT_PET               = 90,
@@ -1505,6 +1506,7 @@ enum TrainerType                                            // this is important
 
 #define MAX_TRAINER_TYPE 4
 
+// CreatureType.dbc
 enum CreatureType
 {
     CREATURE_TYPE_BEAST            = 1,
@@ -1524,6 +1526,7 @@ enum CreatureType
 
 uint32 const CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD = (1 << (CREATURE_TYPE_HUMANOID-1)) | (1 << (CREATURE_TYPE_UNDEAD-1));
 
+// CreatureFamily.dbc
 enum CreatureFamily
 {
     CREATURE_FAMILY_WOLF           = 1,
@@ -1535,6 +1538,7 @@ enum CreatureFamily
     CREATURE_FAMILY_CARRION_BIRD   = 7,
     CREATURE_FAMILY_CRAB           = 8,
     CREATURE_FAMILY_GORILLA        = 9,
+    CREATURE_FAMILY_HORSE_CUSTOM   = 10,                    // not exist in DBC but used for horse like beasts in DB
     CREATURE_FAMILY_RAPTOR         = 11,
     CREATURE_FAMILY_TALLSTRIDER    = 12,
     CREATURE_FAMILY_FELHUNTER      = 15,

@@ -190,7 +190,7 @@ void PlayerTaxi::AppendTaximaskTo( ByteBuffer& data, bool all )
     }
 }
 
-bool PlayerTaxi::LoadTaxiDestinationsFromString( const std::string& values )
+bool PlayerTaxi::LoadTaxiDestinationsFromString( const std::string& values, uint32 team )
 {
     ClearTaxiDestinations();
 
@@ -217,6 +217,10 @@ bool PlayerTaxi::LoadTaxiDestinationsFromString( const std::string& values )
         if(!path)
             return false;
     }
+
+    // can't load taxi path without mount set (quest taxi path?)
+    if(!objmgr.GetTaxiMount(GetTaxiSource(),team))
+        return false;
 
     return true;
 }
@@ -293,6 +297,7 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this)
     m_comboPoints = 0;
 
     m_usedTalentCount = 0;
+    m_questRewardTalentCount = 0;
 
     m_regenTimer = 0;
     m_weaponChangeTimer = 0;
@@ -422,7 +427,7 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this)
 
     for (int i = 0; i < MAX_COMBAT_RATING; i++)
         m_baseRatingValue[i] = 0;
-    
+
     m_baseSpellDamage = 0;
     m_baseSpellHealing = 0;
     m_baseFeralAP = 0;
@@ -2239,7 +2244,8 @@ void Player::InitTalentForLevel()
     }
     else
     {
-        uint32 talentPointsForLevel = uint32((level-9)*sWorld.getRate(RATE_TALENT));
+        uint32 talentPointsForLevel = CalculateTalentsPoints();
+
         // if used more that have then reset
         if(m_usedTalentCount > talentPointsForLevel)
         {
@@ -3154,8 +3160,7 @@ bool Player::resetTalents(bool no_cost)
         CharacterDatabase.PExecute("UPDATE characters set at_login = at_login & ~ %u WHERE guid ='%u'", uint32(AT_LOGIN_RESET_TALENTS), GetGUIDLow());
     }
 
-    uint32 level = getLevel();
-    uint32 talentPointsForLevel = level < 10 ? 0 : uint32((level-9)*sWorld.getRate(RATE_TALENT));
+    uint32 talentPointsForLevel = CalculateTalentsPoints();
 
     if (m_usedTalentCount == 0)
     {
@@ -4530,14 +4535,14 @@ float Player::OCTRegenMPPerSpirit()
 void Player::ApplyRatingMod(CombatRating cr, int32 value, bool apply)
 {
     m_baseRatingValue[cr]+=(apply ? value : -value);
-    
+
     int32 amount = uint32(m_baseRatingValue[cr]);
     // Apply bonus from SPELL_AURA_MOD_RATING_FROM_STAT
     // stat used stored in miscValueB for this aura
     AuraList const& modRatingFromStat = GetAurasByType(SPELL_AURA_MOD_RATING_FROM_STAT);
     for(AuraList::const_iterator i = modRatingFromStat.begin();i != modRatingFromStat.end(); ++i)
         if ((*i)->GetMiscValue() & (1<<cr))
-            amount += GetStat(Stats((*i)->GetMiscBValue())) * (*i)->GetModifier()->m_amount / 100.0f;
+            amount += int32(GetStat(Stats((*i)->GetMiscBValue())) * (*i)->GetModifier()->m_amount / 100.0f);
     if (amount < 0)
         amount = 0;
     SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + cr, uint32(amount));
@@ -6503,7 +6508,7 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
                     uint32 level = ((getLevel() > ssd->MaxLevel) ? ssd->MaxLevel : getLevel());
                     if(ScalingStatValuesEntry const *ssv = sScalingStatValuesStore.LookupEntry(level))
                     {
-                        int multiplier = ssv->Multiplier[proto->GetScalingStatValuesColumn()];
+                        uint32 multiplier = ssv->Multiplier[proto->GetScalingStatValuesColumn()];
                         val = (multiplier * modifier) / 10000;
                     }
                 }
@@ -6512,7 +6517,7 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
         else
         {
             statType = proto->ItemStat[i].ItemStatType;
-            val = float(proto->ItemStat[i].ItemStatValue);
+            val = proto->ItemStat[i].ItemStatValue;
         }
 
         if(val == 0)
@@ -9931,7 +9936,7 @@ uint8 Player::CanEquipItem( uint8 slot, uint16 &dest, Item *pItem, bool swap, bo
                     if(!CanDualWield())
                         return EQUIP_ERR_CANT_DUAL_WIELD;
                 }
-                else if (type == INVTYPE_2HWEAPON) 
+                else if (type == INVTYPE_2HWEAPON)
                 {
                     if(!CanDualWield() || !CanTitanGrip())
                         return EQUIP_ERR_CANT_DUAL_WIELD;
@@ -12675,6 +12680,12 @@ void Player::RewardQuest( Quest const *pQuest, uint32 reward, Object* questGiver
             SetTitle(titleEntry);
     }
 
+    if(pQuest->GetBonusTalents())
+    {
+        m_questRewardTalentCount+=pQuest->GetBonusTalents();
+        InitTalentForLevel();
+    }
+
     // Send reward mail
     if(pQuest->GetRewMailTemplateId())
     {
@@ -14264,12 +14275,12 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
     // clear charm/summon related fields
     SetCharm(NULL);
     SetPet(NULL);
-    SetCharmerGUID(NULL);
-    SetOwnerGUID(NULL);
-    SetCreatorGUID(NULL);
+    SetCharmerGUID(0);
+    SetOwnerGUID(0);
+    SetCreatorGUID(0);
 
     // reset some aura modifiers before aura apply
-    SetFarSight(NULL);
+    SetFarSightGUID(0);
     SetUInt32Value(PLAYER_TRACK_CREATURES, 0 );
     SetUInt32Value(PLAYER_TRACK_RESOURCES, 0 );
 
@@ -14325,15 +14336,14 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
 
     _LoadSpells(holder->GetResult(PLAYER_LOGIN_QUERY_LOADSPELLS));
 
-    // after spell load
-    InitTalentForLevel();
-    learnSkillRewardedSpells();
-    learnDefaultSpells();
-
-
     // after spell load, learn rewarded spell if need also
     _LoadQuestStatus(holder->GetResult(PLAYER_LOGIN_QUERY_LOADQUESTSTATUS));
     _LoadDailyQuestStatus(holder->GetResult(PLAYER_LOGIN_QUERY_LOADDAILYQUESTSTATUS));
+
+    // after spell and quest load
+    InitTalentForLevel();
+    learnSkillRewardedSpells();
+    learnDefaultSpells();
 
     _LoadTutorials(holder->GetResult(PLAYER_LOGIN_QUERY_LOADTUTORIALS));
 
@@ -14364,7 +14374,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
     }
 
     // Not finish taxi flight path
-    if(!m_taxi.LoadTaxiDestinationsFromString(taxi_nodes))
+    if(!m_taxi.LoadTaxiDestinationsFromString(taxi_nodes,GetTeam()))
     {
         // problems with taxi path loading
         TaxiNodesEntry const* nodeEntry = NULL;
@@ -14585,7 +14595,7 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
                     damage = aura->GetModifier()->m_amount;
                 aura->SetLoadedState(caster_guid,damage,maxduration,remaintime,remaincharges);
                 AddAura(aura);
-                sLog.outString("Added aura spellid %u, effect %u", spellproto->Id, effindex);
+                sLog.outDetail("Added aura spellid %u, effect %u", spellproto->Id, effindex);
             }
         }
         while( result->NextRow() );
@@ -15008,6 +15018,9 @@ void Player::_LoadQuestStatus(QueryResult *result)
                         if(CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(pQuest->GetCharTitleId()))
                             SetTitle(titleEntry);
                     }
+
+                    if(pQuest->GetBonusTalents())
+                        m_questRewardTalentCount+=pQuest->GetBonusTalents();
                 }
 
                 sLog.outDebug("Quest status is {%u} for quest {%u} for player (GUID: %u)", questStatusData.m_status, quest_id, GetGUIDLow());
@@ -15284,29 +15297,29 @@ InstancePlayerBind* Player::BindToInstance(InstanceSave *save, bool permanent, b
 
 void Player::SendRaidInfo()
 {
+    uint32 counter = 0;
+
     WorldPacket data(SMSG_RAID_INSTANCE_INFO, 4);
 
-    uint32 counter = 0, i;
-    for(i = 0; i < TOTAL_DIFFICULTIES; i++)
-        for (BoundInstancesMap::iterator itr = m_boundInstances[i].begin(); itr != m_boundInstances[i].end(); ++itr)
-            if(itr->second.perm) counter++;
+    size_t p_counter = data.wpos();
+    data << uint32(counter);                                // placeholder
 
-    data << counter;
-    for(i = 0; i < TOTAL_DIFFICULTIES; i++)
+    for(int i = 0; i < TOTAL_DIFFICULTIES; ++i)
     {
         for (BoundInstancesMap::iterator itr = m_boundInstances[i].begin(); itr != m_boundInstances[i].end(); ++itr)
         {
             if(itr->second.perm)
             {
                 InstanceSave *save = itr->second.save;
-                data << (save->GetMapId());
-                data << (uint32)(save->GetResetTime() - time(NULL));
-                data << save->GetInstanceId();
-                data << uint32(counter);
-                counter--;
+                data << uint32(save->GetMapId());
+                data << uint32(save->GetResetTime() - time(NULL));
+                data << uint32(save->GetInstanceId());
+                data << uint32(save->GetDifficulty());
+                ++counter;
             }
         }
     }
+    data.put<uint32>(p_counter,counter);
     GetSession()->SendPacket(&data);
 }
 
@@ -18692,7 +18705,7 @@ bool Player::isHonorOrXPTarget(Unit* pVictim)
 
     if(pVictim->GetTypeId() == TYPEID_UNIT)
     {
-        if (((Creature*)pVictim)->isTotem() || 
+        if (((Creature*)pVictim)->isTotem() ||
             ((Creature*)pVictim)->isPet() ||
             ((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_XP_AT_KILL)
                 return false;
@@ -19171,7 +19184,7 @@ void Player::EnterVehicle(Vehicle *vehicle)
     vehicle->setFaction(getFaction());
 
     SetCharm(vehicle);                                      // charm
-    SetFarSight(vehicle->GetGUID());                        // set view
+    SetFarSightGUID(vehicle->GetGUID());                        // set view
 
     SetClientControl(vehicle, 1);                           // redirect controls to vehicle
 
@@ -19222,7 +19235,7 @@ void Player::ExitVehicle(Vehicle *vehicle)
     vehicle->setFaction((GetTeam() == ALLIANCE) ? vehicle->GetCreatureInfo()->faction_A : vehicle->GetCreatureInfo()->faction_H);
 
     SetCharm(NULL);
-    SetFarSight(NULL);
+    SetFarSightGUID(0);
 
     SetClientControl(vehicle, 0);
 
@@ -19268,7 +19281,7 @@ void Player::SetTitle(CharTitlesEntry const* title)
 void Player::ConvertRune(uint8 index, uint8 newType)
 {
     SetCurrentRune(index, newType);
-    
+
     WorldPacket data(SMSG_CONVERT_RUNE, 2);
     data << uint8(index);
     data << uint8(newType);
@@ -19312,4 +19325,41 @@ void Player::InitRunes()
 
     for(uint32 i = 0; i < NUM_RUNE_TYPES; ++i)
         SetFloatValue(PLAYER_RUNE_REGEN_1 + i, 0.1f);
+}
+
+void Player::AutoStoreLootItem(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store)
+{
+    Loot loot;
+    loot.FillLoot (loot_id,store,this);
+    if(loot.items.empty ())
+        return;
+    LootItem const* lootItem = &loot.items[0];
+
+    ItemPosCountVec dest;
+    uint8 msg = CanStoreNewItem (bag,slot,dest,lootItem->itemid,lootItem->count);
+    if(msg != EQUIP_ERR_OK && slot != NULL_SLOT)
+        msg = CanStoreNewItem( bag, NULL_SLOT,dest,lootItem->itemid,lootItem->count);
+    if( msg != EQUIP_ERR_OK && bag != NULL_BAG)
+        msg = CanStoreNewItem( NULL_BAG, NULL_SLOT,dest,lootItem->itemid,lootItem->count);
+    if(msg != EQUIP_ERR_OK)
+        return;
+
+    StoreNewItem (dest,lootItem->itemid,true,lootItem->randomPropertyId);
+}
+
+uint32 Player::CalculateTalentsPoints() const
+{
+    uint32 base_talent = getLevel() < 10 ? 0 : uint32((getLevel()-9)*sWorld.getRate(RATE_TALENT));
+
+    if(getClass() != CLASS_DEATH_KNIGHT)
+        return base_talent;
+
+    uint32 talentPointsForLevel =
+        (getLevel() < 56 ? 0 : uint32((getLevel()-55)*sWorld.getRate(RATE_TALENT)))
+        + m_questRewardTalentCount;
+
+    if(talentPointsForLevel > base_talent)
+        talentPointsForLevel = base_talent;
+
+    return talentPointsForLevel;
 }
