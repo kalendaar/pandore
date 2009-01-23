@@ -699,11 +699,12 @@ void Spell::prepareDataForTriggerSystem()
             case SPELLFAMILY_ROGUE:   // For poisons need do it
                 if (m_spellInfo->SpellFamilyFlags & 0x000000101001E000LL) m_canTrigger = true;
             break;
-            case SPELLFAMILY_HUNTER:  // Hunter Rapid Killing/Explosive Trap Effect/Immolation Trap Effect/Frost Trap Aura/Snake Trap Effect
-                if (m_spellInfo->SpellFamilyFlags & 0x0100200000000014LL) m_canTrigger = true;
+            case SPELLFAMILY_HUNTER:  // Hunter Rapid Killing/Explosive Trap Effect/Immolation Trap Effect/Frost Trap Aura/Snake Trap Effect/Explosive Shot
+                if (m_spellInfo->SpellFamilyFlags & 0x0100200000000214LL ||
+                    m_spellInfo->SpellFamilyFlags2 & 0x200) m_canTrigger = true;
             break;
-            case SPELLFAMILY_PALADIN: // For Holy Shock triggers need do it
-                if (m_spellInfo->SpellFamilyFlags & 0x0001000000200000LL) m_canTrigger = true;
+            case SPELLFAMILY_PALADIN: // For Judgements (all) / Holy Shock triggers need do it
+                if (m_spellInfo->SpellFamilyFlags & 0x0001000900B80400LL) m_canTrigger = true;
             break;
         }
     }
@@ -4417,8 +4418,7 @@ uint8 Spell::CanCast(bool strict)
                 // not allow cast fly spells at old maps by players (all spells is self target)
                 if(m_caster->GetTypeId()==TYPEID_PLAYER)
                 {
-                    uint32 v_map = GetVirtualMapForMapAndZone(m_caster->GetMapId(), m_caster->GetZoneId());
-                    if( !((Player*)m_caster)->isGameMaster() && v_map != 530 && !(v_map == 571 && ((Player*)m_caster)->HasSpell(54197)))
+                    if( !((Player*)m_caster)->IsAllowUseFlyMountsHere() )
                         return SPELL_FAILED_NOT_HERE;
                 }
 
