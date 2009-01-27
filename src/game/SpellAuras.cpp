@@ -100,7 +100,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleAuraModParryPercent,                       // 47 SPELL_AURA_MOD_PARRY_PERCENT
     &Aura::HandleUnused,                                    // 48 SPELL_AURA_MOD_DODGE_SKILL    obsolete?
     &Aura::HandleAuraModDodgePercent,                       // 49 SPELL_AURA_MOD_DODGE_PERCENT
-    &Aura::HandleUnused,                                    // 50 SPELL_AURA_MOD_BLOCK_SKILL    obsolete?
+    &Aura::HandleNoImmediateEffect,                         // 50 SPELL_AURA_MOD_CRITICAL_HEALING_BONUS
     &Aura::HandleAuraModBlockPercent,                       // 51 SPELL_AURA_MOD_BLOCK_PERCENT
     &Aura::HandleAuraModCritPercent,                        // 52 SPELL_AURA_MOD_CRIT_PERCENT
     &Aura::HandlePeriodicLeech,                             // 53 SPELL_AURA_PERIODIC_LEECH
@@ -199,7 +199,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNoImmediateEffect,                         //146 SPELL_AURA_ALLOW_TAME_PET_TYPE
     &Aura::HandleNULL,                                      //147 SPELL_AURA_ADD_CREATURE_IMMUNITY
     &Aura::HandleAuraRetainComboPoints,                     //148 SPELL_AURA_RETAIN_COMBO_POINTS
-    &Aura::HandleNoImmediateEffect,                         //149 SPELL_AURA_RESIST_PUSHBACK
+    &Aura::HandleNoImmediateEffect,                         //149 SPELL_AURA_REDUCE_PUSHBACK
     &Aura::HandleShieldBlockValue,                          //150 SPELL_AURA_MOD_SHIELD_BLOCKVALUE_PCT
     &Aura::HandleAuraTrackStealthed,                        //151 SPELL_AURA_TRACK_STEALTHED
     &Aura::HandleNoImmediateEffect,                         //152 SPELL_AURA_MOD_DETECTED_RANGE implemented in Creature::GetAttackDistance
@@ -310,7 +310,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //257 SPELL_AURA_MOD_TARGET_RESIST_BY_SPELL_CLASS Use SpellClassMask for spell select
     &Aura::HandleNULL,                                      //258 SPELL_AURA_MOD_SPELL_VISUAL
     &Aura::HandleNULL,                                      //259 corrupt healing over time spell
-    &Aura::HandleNULL,                                      //260
+    &Aura::HandleNoImmediateEffect,                         //260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &Aura::HandleNULL,                                      //261 out of phase?
     &Aura::HandleNULL,                                      //262
     &Aura::HandleNULL,                                      //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilites set in SpellClassMask
@@ -333,7 +333,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //280 SPELL_AURA_MOD_TARGET_ARMOR_PCT
     &Aura::HandleNULL,                                      //281 SPELL_AURA_MOD_HONOR_GAIN
     &Aura::HandleAuraIncreaseBaseHealthPercent,             //282 SPELL_AURA_INCREASE_BASE_HEALTH_PERCENT
-    &Aura::HandleNULL                                       //283 SPD/heal from AP?
+    &Aura::HandleNoImmediateEffect                          //283 SPELL_AURA_MOD_HEALING_RECEIVED       implemented in Unit::SpellHealingBonus
 };
 
 Aura::Aura(SpellEntry const* spellproto, uint32 eff, int32 *currentBasePoints, Unit *target, Unit *caster, Item* castItem) :
@@ -2220,6 +2220,28 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
         {
             break;
         }
+        case SPELLFAMILY_PRIEST:
+        {
+            // Pain and Suffering
+            if( m_spellProto->SpellIconID == 2874 && m_target->GetTypeId()==TYPEID_PLAYER )
+            {
+                if(apply)
+                {
+                    // Reduce backfire damage (dot damage) from Shadow Word: Death
+                    SpellModifier *mod = new SpellModifier;
+                    mod->op = SPELLMOD_DOT;
+                    mod->value = m_modifier.m_amount;
+                    mod->type = SPELLMOD_PCT;
+                    mod->spellId = GetId();
+                    mod->mask = 0x0000000200000000LL;
+                    mod->mask2= 0LL;
+                    m_spellmod = mod;
+                }
+                ((Player*)m_target)->AddSpellMod(m_spellmod, apply);
+                return;
+            }
+            break;
+        }
         case SPELLFAMILY_DRUID:
         {
             // Lifebloom
@@ -4070,40 +4092,6 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 void Aura::HandlePeriodicHeal(bool apply, bool Real)
 {
     m_isPeriodic = apply;
-
-    // For prevent double apply bonuses
-    bool loading = (m_target->GetTypeId() == TYPEID_PLAYER && ((Player*)m_target)->GetSession()->PlayerLoading());
-
-    if(!loading && apply)
-    {
-        switch (m_spellProto->SpellFamilyName)
-        {
-            case SPELLFAMILY_DRUID:
-            {
-                // Rejuvenation
-                if(m_spellProto->SpellFamilyFlags & 0x0000000000000010LL)
-                {
-                    if(Unit* caster = GetCaster())
-                    {
-                        Unit::AuraList const& classScripts = caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-                        for(Unit::AuraList::const_iterator k = classScripts.begin(); k != classScripts.end(); ++k)
-                        {
-                            int32 tickcount = GetSpellDuration(m_spellProto) / m_spellProto->EffectAmplitude[m_effIndex];
-                            switch((*k)->GetModifier()->m_miscvalue)
-                            {
-                                case 4953:                          // Increased Rejuvenation Healing - Harold's Rejuvenating Broach Aura
-                                case 4415:                          // Increased Rejuvenation Healing - Idol of Rejuvenation Aura
-                                {
-                                    m_modifier.m_amount += (*k)->GetModifier()->m_amount / tickcount;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 void Aura::HandlePeriodicDamage(bool apply, bool Real)
@@ -4262,21 +4250,6 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                 int32 holy = caster->SpellBaseDamageBonus(GetSpellSchoolMask(m_spellProto)) +
                              caster->SpellBaseDamageBonusForVictim(GetSpellSchoolMask(m_spellProto), m_target);
                 m_modifier.m_amount += int32(0.04f*holy + 0.04f*ap);
-
-                // Improved Consecration - Libram of the Eternal Rest
-                Unit::AuraList const& classScripts = caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-                for(Unit::AuraList::const_iterator k = classScripts.begin(); k != classScripts.end(); ++k)
-                {
-                    switch((*k)->GetModifier()->m_miscvalue)
-                    {
-                        case 5147:
-                        {
-                            int32 tickcount = GetSpellDuration(m_spellProto) / m_spellProto->EffectAmplitude[m_effIndex];
-                            m_modifier.m_amount += (*k)->GetModifier()->m_amount / tickcount;
-                            break;
-                        }
-                    }
-                }
                 return;
             }
             // Seal of Vengeance 0.013*$SPH+0.025*$AP per tick (also can stack)
@@ -5171,6 +5144,7 @@ void Aura::HandleShapeshiftBoosts(bool apply)
             break;
         case FORM_TREE:
             spellId = 5420;
+            spellId2 = 34123;
             break;
         case FORM_TRAVEL:
             spellId = 5419;
@@ -5492,6 +5466,14 @@ void Aura::HandleSpiritOfRedemption( bool apply, bool Real )
 
 void Aura::CleanupTriggeredSpells()
 {
+    if (m_spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR && m_spellProto->SpellFamilyFlags & 0x0000001000000020LL)
+    {
+        // Blood Frenzy remove
+        m_target->RemoveAurasDueToSpell(30069);
+        m_target->RemoveAurasDueToSpell(30070);
+        return;
+    }
+
     uint32 tSpellId = m_spellProto->EffectTriggerSpell[GetEffIndex()];
     if(!tSpellId)
         return;
@@ -5724,59 +5706,6 @@ void Aura::PeriodicTick()
             }
 
             pdamage = pCaster->SpellDamageBonus(m_target,GetSpellProto(),pdamage,DOT);
-
-            // talent Soul Siphon add bonus to Drain Life spells
-            if( GetSpellProto()->SpellFamilyName == SPELLFAMILY_WARLOCK && (GetSpellProto()->SpellFamilyFlags & 0x8) )
-            {
-                // find talent max bonus percentage
-                Unit::AuraList const& mClassScriptAuras = pCaster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-                for(Unit::AuraList::const_iterator i = mClassScriptAuras.begin(); i != mClassScriptAuras.end(); ++i)
-                {
-                    if ((*i)->GetModifier()->m_miscvalue == 4992 || (*i)->GetModifier()->m_miscvalue == 4993)
-                    {
-                        if((*i)->GetEffIndex()!=1)
-                        {
-                            sLog.outError("Expected spell %u structure change, need code update",(*i)->GetId());
-                            break;
-                        }
-
-                        // effect 1 m_amount
-                        int32 maxPercent = (*i)->GetModifier()->m_amount;
-                        // effect 0 m_amount
-                        int32 stepPercent = pCaster->CalculateSpellDamage((*i)->GetSpellProto(),0,(*i)->GetSpellProto()->EffectBasePoints[0],pCaster);
-
-                        // count affliction effects and calc additional damage in percentage
-                        int32 modPercent = 0;
-                        Unit::AuraMap const& victimAuras = m_target->GetAuras();
-                        for (Unit::AuraMap::const_iterator itr = victimAuras.begin(); itr != victimAuras.end(); ++itr)
-                        {
-                            Aura* aura = itr->second;
-                            if (aura->IsPositive())continue;
-                            SpellEntry const* m_spell = aura->GetSpellProto();
-                            if (m_spell->SpellFamilyName != SPELLFAMILY_WARLOCK)
-                                continue;
-
-                            SkillLineAbilityMap::const_iterator lower = spellmgr.GetBeginSkillLineAbilityMap(m_spell->Id);
-                            SkillLineAbilityMap::const_iterator upper = spellmgr.GetEndSkillLineAbilityMap(m_spell->Id);
-
-                            for(SkillLineAbilityMap::const_iterator _spell_idx = lower; _spell_idx != upper; ++_spell_idx)
-                            {
-                                if(_spell_idx->second->skillId == SKILL_AFFLICTION)
-                                {
-                                    modPercent += stepPercent;
-                                    if (modPercent >= maxPercent)
-                                    {
-                                        modPercent = maxPercent;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        pdamage += (pdamage*modPercent/100);
-                        break;
-                    }
-                }
-            }
 
             //As of 2.2 resilience reduces damage from DoT ticks as much as the chance to not be critically hit
             // Reduce dot damage from resilience for players
@@ -6172,47 +6101,11 @@ void Aura::PeriodicDummyTick()
                 {
                     if ((*i)->GetId() == GetId())
                     {
-                        // Get tick number
-                        int32 tick = (m_maxduration - m_duration) / m_modifier.periodictime;
-                        // Default case (not on arenas)
-                        if (tick == 0)
-                        {
-                            (*i)->GetModifier()->m_amount = m_modifier.m_amount;
-                            ((Player*)m_target)->UpdateManaRegen();
-                            // Disable continue
-                            m_isPeriodic = false;
-                        }
-                        return;
-                        //**********************************************
-                        // Code commended since arena patch not added
-                        // This feature uses only in arenas
-                        //**********************************************
-                        // Here need increase mana regen per tick (6 second rule)
-                        // on 0 tick -   0  (handled in 2 second)
-                        // on 1 tick - 166% (handled in 4 second)
-                        // on 2 tick - 133% (handled in 6 second)
-                        // Not need update after 3 tick
-                        /*
-                        if (tick > 3)
-                            return;
-                        // Apply bonus for 0 - 3 tick
-                        switch (tick)
-                        {
-                            case 0:   // 0%
-                                (*i)->GetModifier()->m_amount = m_modifier.m_amount = 0;
-                                break;
-                            case 1:   // 166%
-                                (*i)->GetModifier()->m_amount = m_modifier.m_amount * 5 / 3;
-                                break;
-                            case 2:   // 133%
-                                (*i)->GetModifier()->m_amount = m_modifier.m_amount * 4 / 3;
-                                break;
-                            default:  // 100% - normal regen
-                                (*i)->GetModifier()->m_amount = m_modifier.m_amount;
-                                break;
-                        }
+                        (*i)->GetModifier()->m_amount = m_modifier.m_amount;
                         ((Player*)m_target)->UpdateManaRegen();
-                        return;*/
+                        // Disable continue
+                        m_isPeriodic = false;
+                        return;
                     }
                 }
                 return;

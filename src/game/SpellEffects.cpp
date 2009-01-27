@@ -435,38 +435,6 @@ void Spell::EffectSchoolDMG(uint32 effect_idx)
                 {
                     damage += int32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK)*0.08f);
                 }
-                // Starfire
-                else if ( m_spellInfo->SpellFamilyFlags & 0x0004LL )
-                {
-                    Unit::AuraList const& m_OverrideClassScript = m_caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-                    for(Unit::AuraList::const_iterator i = m_OverrideClassScript.begin(); i != m_OverrideClassScript.end(); ++i)
-                    {
-                        // Starfire Bonus (caster)
-                        switch((*i)->GetModifier()->m_miscvalue)
-                        {
-                            case 5481:                      // Nordrassil Regalia - bonus
-                            {
-                                Unit::AuraList const& m_periodicDamageAuras = unitTarget->GetAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
-                                for(Unit::AuraList::const_iterator itr = m_periodicDamageAuras.begin(); itr != m_periodicDamageAuras.end(); ++itr)
-                                {
-                                    // Moonfire or Insect Swarm (target debuff from any casters)
-                                    if ( (*itr)->GetSpellProto()->SpellFamilyFlags & 0x00200002LL )
-                                    {
-                                        int32 mod = (*i)->GetModifier()->m_amount;
-                                        damage += damage*mod/100;
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-                            case 5148:                      //Improved Starfire - Ivory Idol of the Moongoddes Aura
-                            {
-                                damage += (*i)->GetModifier()->m_amount;
-                                break;
-                            }
-                        }
-                    }
-                }
                 //Mangle Bonus for the initial damage of Lacerate and Rake
                 if((m_spellInfo->SpellFamilyFlags==0x0000000000001000LL && m_spellInfo->SpellIconID==494) ||
                     (m_spellInfo->SpellFamilyFlags==0x0000010000000000LL && m_spellInfo->SpellIconID==2246))
@@ -1271,6 +1239,15 @@ void Spell::EffectDummy(uint32 i)
                 m_caster->SetPower(POWER_RAGE,0);
                 return;
             }
+            // Slam
+            if(m_spellInfo->SpellFamilyFlags & 0x0000000000200000LL)
+            {
+                if(!unitTarget)
+                    return;
+                m_damage+=m_caster->CalculateDamage(m_attackType, false);
+                m_damage+=damage;
+                return;
+            }
             switch(m_spellInfo->Id)
             {
                 // Warrior's Wrath
@@ -1286,6 +1263,12 @@ void Spell::EffectDummy(uint32 i)
                 {
                     int32 healthModSpellBasePoints0 = int32(m_caster->GetMaxHealth()*0.3);
                     m_caster->CastCustomSpell(m_caster, 12976, &healthModSpellBasePoints0, NULL, NULL, true, NULL);
+                    return;
+                }
+                // Bloodthirst
+                case 23881:
+                {
+                    m_caster->CastCustomSpell(unitTarget, 23885, &damage, NULL, NULL, true, NULL);
                     return;
                 }
             }
@@ -1398,16 +1381,6 @@ void Spell::EffectDummy(uint32 i)
             }
             break;
         case SPELLFAMILY_DRUID:
-            switch(m_spellInfo->Id )
-            {
-                case 5420:                                  // Tree of Life passive
-                {
-                    // Tree of Life area effect
-                    int32 health_mod = int32(m_caster->GetStat(STAT_SPIRIT)/4);
-                    m_caster->CastCustomSpell(m_caster,34123,&health_mod,NULL,NULL,true,NULL);
-                    return;
-                }
-            }
             break;
         case SPELLFAMILY_ROGUE:
             switch(m_spellInfo->Id )
@@ -1731,12 +1704,29 @@ void Spell::EffectDummy(uint32 i)
                 }
                 return;
             }
-
-            if(m_spellInfo->Id == 39610)                    // Mana-Tide Totem effect
+            // Healing Stream Totem
+            if(m_spellInfo->SpellFamilyFlags & 0x0000000000002000LL)
+            {
+                m_caster->CastCustomSpell(unitTarget, 52042, &damage, 0, 0, true, 0, 0, m_originalCasterGUID);
+                return;
+            }
+            // Mana Spring Totem
+            if(m_spellInfo->SpellFamilyFlags & 0x0000000000004000LL)
+            {
+                if(unitTarget->getPowerType()!=POWER_MANA)
+                    return;
+                m_caster->CastCustomSpell(unitTarget, 52032, &damage, 0, 0, true, 0, 0, m_originalCasterGUID);
+                return;
+            }
+            if(m_spellInfo->Id == 39610)                    // Mana Tide Totem effect
             {
                 if(!unitTarget || unitTarget->getPowerType() != POWER_MANA)
                     return;
-
+                // Glyph of Mana Tide
+                Unit *owner = m_caster->GetOwner();
+                if (owner)
+                    if (Aura *dummy = owner->GetDummyAura(55441))
+                        damage+=dummy->GetModifier()->m_amount;
                 // Regenerate 6% of Total Mana Every 3 secs
                 int32 EffectBasePoints0 = unitTarget->GetMaxPower(POWER_MANA)  * damage / 100;
                 m_caster->CastCustomSpell(unitTarget,39609,&EffectBasePoints0,NULL,NULL,true,NULL,NULL,m_originalCasterGUID);
@@ -3345,7 +3335,7 @@ void Spell::EffectLearnSpell(uint32 i)
     Player *player = (Player*)unitTarget;
 
     uint32 spellToLearn = ((m_spellInfo->Id==SPELL_ID_GENERIC_LEARN) || (m_spellInfo->Id==SPELL_ID_GENERIC_LEARN_PET)) ? damage : m_spellInfo->EffectTriggerSpell[i];
-    player->learnSpell(spellToLearn);
+    player->learnSpell(spellToLearn,false);
 
     sLog.outDebug( "Spell: Player %u have learned spell %u from NpcGUID=%u", player->GetGUIDLow(), spellToLearn, m_caster->GetGUIDLow() );
 }
@@ -4866,7 +4856,7 @@ void Spell::EffectScriptEffect(uint32 effIndex)
 
                     // learn random explicit discovery recipe (if any)
                     if(uint32 discoveredSpell = GetExplicitDiscoverySpell(m_spellInfo->Id, player))
-                        player->learnSpell(discoveredSpell);
+                        player->learnSpell(discoveredSpell,false);
                     return;
                 }
             }
@@ -4938,6 +4928,34 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                     DoCreateItem( effIndex, itemtype );
                     return;
                 }
+            }
+            break;
+        }
+        case SPELLFAMILY_PRIEST:
+        {
+            switch(m_spellInfo->Id)
+            {
+                // Pain and Suffering
+                case 47948:
+                {
+                    if (!unitTarget)
+                        return;
+                    // Refresh Shadow Word: Pain on target
+                    Unit::AuraList const &mPeriodic = unitTarget->GetAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
+                    for(Unit::AuraList::const_iterator i = mPeriodic.begin(); i != mPeriodic.end(); ++i)
+                    {
+                        if( (*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST &&
+                            (*i)->GetSpellProto()->SpellFamilyFlags & 0x0000000000008000LL &&
+                            (*i)->GetCasterGUID()==m_caster->GetGUID() )
+                        {
+                            (*i)->RefreshAura();
+                            return;
+                        }
+                    }
+                    return;
+                }
+                default:
+                    break;
             }
             break;
         }
