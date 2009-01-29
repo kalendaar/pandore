@@ -837,6 +837,12 @@ Channel.SilentlyGMJoin = 0
 #                 0 (disable)
 #                 1 (enable)
 #
+#    GM.Visible
+#        GM visibility at login
+#        Default: 2 (last save state)
+#                 0 (invisible)
+#                 1 (visible)
+#
 #    GM.AcceptTickets
 #        Is GM accepting tickets from player by default or not.
 #        Default: 2 (last save state)
@@ -887,6 +893,7 @@ Channel.SilentlyGMJoin = 0
 ###################################################################################################################
 
 GM.LoginState            = 2
+GM.Visible               = 2
 GM.AcceptTickets         = 2
 GM.Chat                  = 2
 GM.WhisperingTo          = 2

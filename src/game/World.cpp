@@ -779,6 +779,7 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_configs[CONFIG_GM_LOGIN_STATE]       = sConfig.GetIntDefault("GM.LoginState", 2);
+    m_configs[CONFIG_GM_VISIBLE_STATE]     = sConfig.GetIntDefault("GM.Visible", 2);
     m_configs[CONFIG_GM_ACCEPT_TICKETS]    = sConfig.GetIntDefault("GM.AcceptTickets", 2);
     m_configs[CONFIG_GM_CHAT]              = sConfig.GetIntDefault("GM.Chat", 2);
     m_configs[CONFIG_GM_WISPERING_TO]      = sConfig.GetIntDefault("GM.WhisperingTo", 2);
@@ -1117,6 +1118,9 @@ void World::SetInitialWorldSettings()
 
     sLog.outString( "Loading Spell Proc Event conditions..." );
     spellmgr.LoadSpellProcEvents();
+
+    sLog.outString( "Loading Spell Bonus Data..." );
+    spellmgr.LoadSpellBonusess();
 
     sLog.outString( "Loading Aggro Spells Definitions...");
     spellmgr.LoadSpellThreats();
