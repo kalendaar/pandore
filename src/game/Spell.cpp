@@ -177,12 +177,16 @@ bool SpellCastTargets::read ( WorldPacket * data, Unit *caster )
         if(!data->readPackGUID(m_unitTargetGUID))
             return false;
 
-    if( m_targetMask & ( TARGET_FLAG_OBJECT | TARGET_FLAG_OBJECT_UNK ))
+    if( m_targetMask & ( TARGET_FLAG_OBJECT ))
         if(!data->readPackGUID(m_GOTargetGUID))
             return false;
 
     if(( m_targetMask & ( TARGET_FLAG_ITEM | TARGET_FLAG_TRADE_ITEM )) && caster->GetTypeId() == TYPEID_PLAYER)
         if(!data->readPackGUID(m_itemTargetGUID))
+            return false;
+
+    if( m_targetMask & (TARGET_FLAG_CORPSE | TARGET_FLAG_PVP_CORPSE ) )
+        if(!data->readPackGUID(m_CorpseTargetGUID))
             return false;
 
     if( m_targetMask & TARGET_FLAG_SOURCE_LOCATION )
@@ -197,7 +201,10 @@ bool SpellCastTargets::read ( WorldPacket * data, Unit *caster )
 
     if( m_targetMask & TARGET_FLAG_DEST_LOCATION )
     {
-        if(data->rpos()+4+4+4 > data->size())
+        if(data->rpos()+1+4+4+4 > data->size())
+            return false;
+
+        if(!data->readPackGUID(m_unitTargetGUID))
             return false;
 
         *data >> m_destX >> m_destY >> m_destZ;
@@ -213,10 +220,6 @@ bool SpellCastTargets::read ( WorldPacket * data, Unit *caster )
         *data >> m_strTarget;
     }
 
-    if( m_targetMask & (TARGET_FLAG_CORPSE | TARGET_FLAG_PVP_CORPSE ) )
-        if(!data->readPackGUID(m_CorpseTargetGUID))
-            return false;
-
     // find real units/GOs
     Update(caster);
     return true;
@@ -226,7 +229,7 @@ void SpellCastTargets::write ( WorldPacket * data )
 {
     *data << uint32(m_targetMask);
 
-    if( m_targetMask & ( TARGET_FLAG_UNIT | TARGET_FLAG_PVP_CORPSE | TARGET_FLAG_OBJECT | TARGET_FLAG_OBJECT_UNK | TARGET_FLAG_CORPSE | TARGET_FLAG_UNK2 ) )
+    if( m_targetMask & ( TARGET_FLAG_UNIT | TARGET_FLAG_PVP_CORPSE | TARGET_FLAG_OBJECT | TARGET_FLAG_CORPSE | TARGET_FLAG_UNK2 ) )
     {
         if(m_targetMask & TARGET_FLAG_UNIT)
         {
@@ -235,7 +238,7 @@ void SpellCastTargets::write ( WorldPacket * data )
             else
                 *data << uint8(0);
         }
-        else if( m_targetMask & ( TARGET_FLAG_OBJECT | TARGET_FLAG_OBJECT_UNK ) )
+        else if( m_targetMask & TARGET_FLAG_OBJECT )
         {
             if(m_GOTarget)
                 data->append(m_GOTarget->GetPackGUID());
@@ -260,7 +263,14 @@ void SpellCastTargets::write ( WorldPacket * data )
         *data << m_srcX << m_srcY << m_srcZ;
 
     if( m_targetMask & TARGET_FLAG_DEST_LOCATION )
+    {
+        if(m_unitTarget)
+            data->append(m_unitTarget->GetPackGUID());
+        else
+            *data << uint8(0);
+
         *data << m_destX << m_destY << m_destZ;
+    }
 
     if( m_targetMask & TARGET_FLAG_STRING )
         *data << m_strTarget;
@@ -363,7 +373,7 @@ Spell::Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 origi
     // determine reflection
     m_canReflect = false;
 
-    if(m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && (m_spellInfo->AttributesEx2 & 0x4)==0)
+    if(m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED))
     {
         for(int j=0;j<3;j++)
         {
@@ -373,7 +383,7 @@ Spell::Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 origi
             if(!IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j],m_spellInfo->EffectImplicitTargetB[j]))
                 m_canReflect = true;
             else
-                m_canReflect = (m_spellInfo->AttributesEx & (1<<7)) ? true : false;
+                m_canReflect = (m_spellInfo->AttributesEx & SPELL_ATTR_EX_NEGATIVE) ? true : false;
 
             if(m_canReflect)
                 continue;
@@ -4602,15 +4612,16 @@ uint8 Spell::CheckCasterAuras() const
     //Check whether the cast should be prevented by any state you might have.
     uint8 prevented_reason = 0;
     // Have to check if there is a stun aura. Otherwise will have problems with ghost aura apply while logging out
-    if(!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED) && m_caster->HasAuraType(SPELL_AURA_MOD_STUN))
+    uint32 unitflag = m_caster->GetUInt32Value(UNIT_FIELD_FLAGS);     // Get unit state
+    if(unitflag & UNIT_FLAG_STUNNED && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED))
         prevented_reason = SPELL_FAILED_STUNNED;
-    else if(m_caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED) && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED))
+    else if(unitflag & UNIT_FLAG_CONFUSED && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED))
         prevented_reason = SPELL_FAILED_CONFUSED;
-    else if(m_caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING) && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_FEARED))
+    else if(unitflag & UNIT_FLAG_FLEEING && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_FEARED))
         prevented_reason = SPELL_FAILED_FLEEING;
-    else if(m_caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED) && m_spellInfo->PreventionType==SPELL_PREVENTION_TYPE_SILENCE)
+    else if(unitflag & UNIT_FLAG_SILENCED && m_spellInfo->PreventionType==SPELL_PREVENTION_TYPE_SILENCE)
         prevented_reason = SPELL_FAILED_SILENCED;
-    else if(m_caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED) && m_spellInfo->PreventionType==SPELL_PREVENTION_TYPE_PACIFY)
+    else if(unitflag & UNIT_FLAG_PACIFIED && m_spellInfo->PreventionType==SPELL_PREVENTION_TYPE_PACIFY)
         prevented_reason = SPELL_FAILED_PACIFIED;
 
     // Attr must make flag drop spell totally immune from all effects
