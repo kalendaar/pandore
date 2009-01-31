@@ -412,7 +412,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             RemoveSpellsCausingAura(SPELL_AURA_MOD_INVISIBILITY);
 
         if(pVictim->GetTypeId() == TYPEID_PLAYER && !pVictim->IsStandState() && !pVictim->hasUnitState(UNIT_STAT_STUNNED))
-            pVictim->SetStandState(PLAYER_STATE_NONE);
+            pVictim->SetStandState(UNIT_STAND_STATE_STAND);
     }
 
     //Script Event damage Deal
@@ -3489,6 +3489,7 @@ bool Unit::RemoveNoStackAurasDueToAura(Aura *Aur)
         return false;
 
     uint32 spellId = Aur->GetId();
+    uint32 effIndex = Aur->GetEffIndex();
 
     // passive spell special case (only non stackable with ranks)
     if(IsPassiveSpell(spellId))
@@ -3496,8 +3497,6 @@ bool Unit::RemoveNoStackAurasDueToAura(Aura *Aur)
         if(IsPassiveSpellStackableWithRanks(spellProto))
             return true;
     }
-
-    uint32 effIndex = Aur->GetEffIndex();
 
     SpellSpecific spellId_spec = GetSpellSpecific(spellId);
 
@@ -7619,13 +7618,13 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
                         break;
                     }
                 }
-                int DotTicks = 6;
+                int32 DotTicks = 6;
                 if(spellProto->EffectAmplitude[x] != 0)
                     DotTicks = DotDuration / spellProto->EffectAmplitude[x];
                 if(DotTicks)
                 {
-                    DoneAdvertisedBenefit /= DotTicks*stack;
-                    TakenAdvertisedBenefit /= DotTicks*stack;
+                    DoneAdvertisedBenefit /= DotTicks*int32(stack);
+                    TakenAdvertisedBenefit /= DotTicks*int32(stack);
                 }
             }
         }
@@ -8032,13 +8031,13 @@ uint32 Unit::SpellHealingBonus(Unit *pVictim, SpellEntry const *spellProto, uint
                         break;
                     }
                 }
-                int DotTicks = 6;
+                int32 DotTicks = 6;
                 if(spellProto->EffectAmplitude[x] != 0)
                     DotTicks = DotDuration / spellProto->EffectAmplitude[x];
                 if(DotTicks)
                 {
-                    DoneAdvertisedBenefit /= DotTicks;
-                    TakenAdvertisedBenefit /= DotTicks;
+                    DoneAdvertisedBenefit /= DotTicks*int32(stack);
+                    TakenAdvertisedBenefit /= DotTicks*int32(stack);
                 }
             }
         }
@@ -8741,14 +8740,11 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
             return false;
     }
 
-    AuraList const& thisPhaseList = GetAurasByType (SPELL_AURA_PHASE);
-    AuraList const& uPhaseList = u->GetAurasByType (SPELL_AURA_PHASE);
-
     // Visible units, always are visible for all units, except for units under invisibility and phases
-    if (m_Visibility == VISIBILITY_ON && u->m_invisibilityMask==0 && thisPhaseList.empty() && uPhaseList.empty())
+    if (m_Visibility == VISIBILITY_ON && u->m_invisibilityMask==0 && InSamePhase(u))
         return true;
 
-    // GMs see any players, not higher GMs and all units
+    // GMs see any players, not higher GMs and all units in any phase
     if (u->GetTypeId() == TYPEID_PLAYER && ((Player *)u)->isGameMaster())
     {
         if(GetTypeId() == TYPEID_PLAYER)
@@ -8761,29 +8757,10 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
     if (m_Visibility == VISIBILITY_OFF)
         return false;
 
-    // phased visibility (both must phased or not phased)
-    if(thisPhaseList.empty() !=  uPhaseList.empty())
+    // phased visibility (both must phased in same way)
+    if(!InSamePhase(u))
         return false;
 
-    // phased visibility (in phased state work normal rules but both must have same phase)
-    if(!thisPhaseList.empty())
-    {
-        bool samePhase = false;
-        for(AuraList::const_iterator thisItr = thisPhaseList.begin(); thisItr != thisPhaseList.end(); ++thisItr)
-        {
-            uint32 thisPhase = (*thisItr)->GetMiscValue();
-            for(AuraList::const_iterator uItr = uPhaseList.begin(); uItr != uPhaseList.end(); ++uItr)
-            {
-                if((*uItr)->GetMiscValue()==thisPhase)
-                {
-                    samePhase = true;
-                    break;
-                }
-            }
-        }
-        if(!samePhase)
-            return false;
-    }
     // raw invisibility
     bool invisible = (m_invisibilityMask != 0 || u->m_invisibilityMask !=0);
 
@@ -10756,15 +10733,16 @@ void Unit::SetConfused(bool apply, uint64 casterGUID, uint32 spellID)
 bool Unit::IsSitState() const
 {
     uint8 s = getStandState();
-    return s == PLAYER_STATE_SIT_CHAIR || s == PLAYER_STATE_SIT_LOW_CHAIR ||
-        s == PLAYER_STATE_SIT_MEDIUM_CHAIR || s == PLAYER_STATE_SIT_HIGH_CHAIR ||
-        s == PLAYER_STATE_SIT;
+    return
+        s == UNIT_STAND_STATE_SIT_CHAIR        || s == UNIT_STAND_STATE_SIT_LOW_CHAIR  ||
+        s == UNIT_STAND_STATE_SIT_MEDIUM_CHAIR || s == UNIT_STAND_STATE_SIT_HIGH_CHAIR ||
+        s == UNIT_STAND_STATE_SIT;
 }
 
 bool Unit::IsStandState() const
 {
     uint8 s = getStandState();
-    return !IsSitState() && s != PLAYER_STATE_SLEEP && s != PLAYER_STATE_KNEEL;
+    return !IsSitState() && s != UNIT_STAND_STATE_SLEEP && s != UNIT_STAND_STATE_KNEEL;
 }
 
 void Unit::SetStandState(uint8 state)
@@ -10878,7 +10856,7 @@ Unit* Unit::SelectNearbyTarget() const
 
     {
         MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, ATTACK_DISTANCE);
-        MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck> searcher(targets, u_check);
+        MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
 
         TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck>, WorldTypeMapContainer > world_unit_searcher(searcher);
         TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
@@ -11338,4 +11316,13 @@ void Unit::RemoveAurasAtChanneledTarget(SpellEntry const* spellInfo)
         else
             ++iter;
     }
+}
+
+void Unit::SetPhaseMask(uint32 newPhaseMask, bool update)
+{
+    WorldObject::SetPhaseMask(newPhaseMask,update);
+
+    if(IsInWorld())
+        if(Pet* pet = GetPet())
+            pet->SetPhaseMask(newPhaseMask,true);
 }

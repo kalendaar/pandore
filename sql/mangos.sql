@@ -22,7 +22,7 @@
 DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
-  `required_7199_02_mangos_spell_proc_event` bit(1) default NULL
+  `required_7207_02_mangos_gameobject` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -488,6 +488,7 @@ CREATE TABLE `creature` (
   `id` mediumint(8) unsigned NOT NULL default '0' COMMENT 'Creature Identifier',
   `map` smallint(5) unsigned NOT NULL default '0' COMMENT 'Map Identifier',
   `spawnMask` tinyint(3) unsigned NOT NULL default '1',
+  `phaseMask` smallint(5) unsigned NOT NULL default '1',
   `modelid` mediumint(8) unsigned NOT NULL default '0',
   `equipment_id` mediumint(9) NOT NULL default '0',
   `position_x` float NOT NULL default '0',
@@ -1244,6 +1245,7 @@ CREATE TABLE `gameobject` (
   `id` mediumint(8) unsigned NOT NULL default '0' COMMENT 'Gameobject Identifier',
   `map` smallint(5) unsigned NOT NULL default '0' COMMENT 'Map Identifier',
   `spawnMask` tinyint(3) unsigned NOT NULL default '1',
+  `phaseMask` smallint(5) unsigned NOT NULL default '1',
   `position_x` float NOT NULL default '0',
   `position_y` float NOT NULL default '0',
   `position_z` float NOT NULL default '0',
@@ -13962,12 +13964,6 @@ INSERT INTO spell_chain VALUES
 (34120,56641,56641,2,0),
 (49051,34120,56641,3,0),
 (49052,49051,56641,4,0),
-/*ViperSting*/
-(3034,0,3034,1,0),
-(14279,3034,3034,2,0),
-(14280,14279,3034,3,0),
-(27018,14280,3034,4,0),
-(49008,27018,3034,5,0),
 /*Volley*/
 (1510,0,1510,1,0),
 (14294,1510,1510,2,0),
@@ -14894,14 +14890,6 @@ INSERT INTO spell_chain VALUES
 (27219,11700,689,7,0),
 (27220,27219,689,8,0),
 (47857,27220,689,9,0),
-/*DrainMana*/
-(5138,0,5138,1,0),
-(6226,5138,5138,2,0),
-(11703,6226,5138,3,0),
-(11704,11703,5138,4,0),
-(27221,11704,5138,5,0),
-(30908,27221,5138,6,0),
-(47858,30908,5138,7,0),
 /*DrainSoul*/
 (1120,0,1120,1,0),
 (8288,1120,1120,2,0),
@@ -15700,15 +15688,6 @@ INSERT INTO spell_chain VALUES
 (25431,10952,588,7,0),
 (48040,25431,588,8,0),
 (48168,48040,588,9,0),
-/*ManaBurn*/
-(8129,0,8129,1,0),
-(8131,8129,8129,2,0),
-(10874,8131,8129,3,0),
-(10875,10874,8129,4,0),
-(10876,10875,8129,5,0),
-(25379,10876,8129,6,0),
-(25380,25379,8129,7,0),
-(48128,25380,8129,8,0),
 /*Penance*/
 (47540,0,47540,1,0),
 (53005,47540,47540,2,0),
