@@ -177,6 +177,7 @@ class ChatHandler
         bool HandleModifyHonorCommand (const char* args);
         bool HandleModifyRepCommand(const char* args);
         bool HandleModifyArenaCommand(const char* args);
+        bool HandleModifyPhaseCommand(const char* args);
         bool HandleModifyGenderCommand(const char* args);
 
         bool HandleNpcAddCommand(const char* args);
@@ -192,6 +193,7 @@ class ChatHandler
         bool HandleNpcSayCommand(const char* args);
         bool HandleNpcSetModelCommand(const char* args);
         bool HandleNpcSetMoveTypeCommand(const char* args);
+        bool HandleNpcSetPhaseCommand(const char* args);
         bool HandleNpcSpawnDistCommand(const char* args);
         bool HandleNpcSpawnTimeCommand(const char* args);
         bool HandleNpcTameCommand(const char* args);
@@ -314,6 +316,7 @@ class ChatHandler
         bool HandleTargetObjectCommand(const char* args);
         bool HandleDelObjectCommand(const char* args);
         bool HandleMoveObjectCommand(const char* args);
+        bool HandleGOPhaseCommand(const char* args);
         bool HandleTurnObjectCommand(const char* args);
         bool HandlePInfoCommand(const char* args);
         bool HandlePLimitCommand(const char* args);
@@ -450,6 +453,7 @@ class ChatHandler
         char*     extractKeyFromLink(char* text, char const* const* linkTypes, int* found_idx, char** something1 = NULL);
 
         uint32    extractSpellIdFromLink(char* text);
+        uint64    extractGuidFromLink(char* text);
         GameTele const* extractGameTeleFromLink(char* text);
 
         GameObject* GetObjectGlobalyWithGuidOrNearWithDbGuid(uint32 lowguid,uint32 entry);
