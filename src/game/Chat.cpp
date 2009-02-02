@@ -42,10 +42,11 @@
 // |color|Hgameobject_entry:go_id|h[name]|h|r
 // |color|Hitem:item_id:perm_ench_id:0:0|h[name]|h|r
 // |color|Hitemset:itemset_id|h[name]|h|r
+// |color|Hplayer:name|h[name]|h|r                                        - client, in some messages, at click copy only name instead link
 // |color|Hquest:quest_id|h[name]|h|r
 // |color|Hskill:skill_id|h[name]|h|r
-// |color|Hspell:spell_id|h[name]|h|r                              - client, spellbook spell icon shift-click
-// |color|Htalent:talent_id,rank|h[name]|h|r                       - client, talent icon shift-click
+// |color|Hspell:spell_id|h[name]|h|r                                     - client, spellbook spell icon shift-click
+// |color|Htalent:talent_id,rank|h[name]|h|r                              - client, talent icon shift-click
 // |color|Htele:id|h[name]|h|r
 // |color|Htrade:spell_id,cur_value,max_value,unk3int,unk3str|h[name]|h|r - client, spellbook profession icon shift-click
 
@@ -146,6 +147,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "drunk",          SEC_MODERATOR,      false, &ChatHandler::HandleDrunkCommand,               "", NULL },
         { "standstate",     SEC_GAMEMASTER,     false, &ChatHandler::HandleStandStateCommand,          "", NULL },
         { "morph",          SEC_GAMEMASTER,     false, &ChatHandler::HandleMorphCommand,               "", NULL },
+        { "phase",          SEC_GAMEMASTER,     false, &ChatHandler::HandleModifyPhaseCommand,         "", NULL },
         { "gender",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleModifyGenderCommand,        "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
@@ -429,6 +431,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "info",           SEC_ADMINISTRATOR,  false, &ChatHandler::HandleNpcInfoCommand,             "", NULL },
         { "playemote",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleNpcPlayEmoteCommand,        "", NULL },
         { "follow",         SEC_GAMEMASTER,     false, &ChatHandler::HandleNpcFollowCommand,           "", NULL },
+        { "setphase",       SEC_GAMEMASTER,     false, &ChatHandler::HandleNpcSetPhaseCommand,         "", NULL },
         { "unfollow",       SEC_GAMEMASTER,     false, &ChatHandler::HandleNpcUnFollowCommand,         "", NULL },
         { "whisper",        SEC_MODERATOR,      false, &ChatHandler::HandleNpcWhisperCommand,          "", NULL },
         { "yell",           SEC_MODERATOR,      false, &ChatHandler::HandleNpcYellCommand,             "", NULL },
@@ -461,10 +464,11 @@ ChatCommand * ChatHandler::getCommandTable()
     {
         { "add",            SEC_GAMEMASTER,     false, &ChatHandler::HandleGameObjectCommand,          "", NULL },
         { "delete",         SEC_GAMEMASTER,     false, &ChatHandler::HandleDelObjectCommand,           "", NULL },
-        { "target",         SEC_GAMEMASTER,     false, &ChatHandler::HandleTargetObjectCommand,        "", NULL },
-        { "turn",           SEC_GAMEMASTER,     false, &ChatHandler::HandleTurnObjectCommand,          "", NULL },
         { "move",           SEC_GAMEMASTER,     false, &ChatHandler::HandleMoveObjectCommand,          "", NULL },
         { "near",           SEC_ADMINISTRATOR,  false, &ChatHandler::HandleNearObjectCommand,          "", NULL },
+        { "setphase",       SEC_GAMEMASTER,     false, &ChatHandler::HandleGOPhaseCommand,             "", NULL },
+        { "target",         SEC_GAMEMASTER,     false, &ChatHandler::HandleTargetObjectCommand,        "", NULL },
+        { "turn",           SEC_GAMEMASTER,     false, &ChatHandler::HandleTurnObjectCommand,          "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
 
@@ -1162,12 +1166,23 @@ char* ChatHandler::extractKeyFromLink(char* text, char const* const* linkTypes, 
     // [name] Shift-click form |color|linkType:key|h[name]|h|r
     // or
     // [name] Shift-click form |color|linkType:key:something1:...:somethingN|h[name]|h|r
+    // or
+    // [name] Shift-click form |linkType:key|h[name]|h|r
 
-    char* check = strtok(text, "|");                        // skip color
-    if(!check)
-        return NULL;                                        // end of data
+    char* tail;
 
-    char* cLinkType = strtok(NULL, ":");                    // linktype
+    if(text[1]=='c')
+    {
+        char* check = strtok(text, "|");                    // skip color
+        if(!check)
+            return NULL;                                    // end of data
+
+        tail = strtok(NULL, "");                            // tail
+    }
+    else
+        tail = text+1;                                      // skip first |
+
+    char* cLinkType = strtok(tail, ":");                    // linktype
     if(!cLinkType)
         return NULL;                                        // end of data
 
@@ -1323,6 +1338,86 @@ GameTele const* ChatHandler::extractGameTeleFromLink(char* text)
             return objmgr.GetGameTele(id);
 
     return objmgr.GetGameTele(cId);
+}
+
+enum GuidLinkType
+{
+    SPELL_LINK_PLAYER     = 0,                              // must be first for selection in not link case
+    SPELL_LINK_CREATURE   = 1,
+    SPELL_LINK_GAMEOBJECT = 2
+};
+
+static char const* const guidKeys[] =
+{
+    "Hplayer",
+    "Hcreature",
+    "Hgameobject",
+    0
+};
+
+uint64 ChatHandler::extractGuidFromLink(char* text)
+{
+    int type = 0;
+
+    // |color|Hcreature:creature_guid|h[name]|h|r
+    // |color|Hgameobject:go_guid|h[name]|h|r
+    // |color|Hplayer:name|h[name]|h|r
+    char* idS = extractKeyFromLink(text,guidKeys,&type);
+    if(!idS)
+        return 0;
+
+    switch(type)
+    {
+        case SPELL_LINK_PLAYER:
+        {
+            std::string name = idS;
+            if(!normalizePlayerName(name))
+                return 0;
+
+            if(Player* player = objmgr.GetPlayer(name.c_str()))
+                return player->GetGUID();
+
+            if(uint64 guid = objmgr.GetPlayerGUIDByName(name))
+                return guid;
+
+            return 0;
+        }
+        case SPELL_LINK_CREATURE:
+        {
+            uint32 lowguid = (uint32)atol(idS);
+
+            if(CreatureData const* data = objmgr.GetCreatureData(lowguid) )
+                return MAKE_NEW_GUID(lowguid,data->id,HIGHGUID_UNIT);
+            else
+                return 0;
+        }
+        case SPELL_LINK_GAMEOBJECT:
+        {
+            uint32 lowguid = (uint32)atol(idS);
+
+            if(GameObjectData const* data = objmgr.GetGOData(lowguid) )
+                return MAKE_NEW_GUID(lowguid,data->id,HIGHGUID_GAMEOBJECT);
+            else
+                return 0;
+        }
+    }
+
+    // unknown type?
+    return 0;
+}
+
+std::string ChatHandler::extractPlayerNameFromLink(char* text)
+{
+    // |color|Hplayer:name|h[name]|h|r
+    char* name_str = extractKeyFromLink(text,"Hplayer");
+    if(!name_str)
+        return "";
+
+    std::string name = name_str;
+    if(!normalizePlayerName(name))
+        return "";
+
+    return name;
 }
 
 const char *ChatHandler::GetName() const

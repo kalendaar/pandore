@@ -544,6 +544,7 @@ void GameObject::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         << GetEntry() << ", "
         << mapid << ", "
         << (uint32)spawnMask << ", "
+        << (uint32)GetPhaseMask() << ","
         << GetFloatValue(GAMEOBJECT_POS_X) << ", "
         << GetFloatValue(GAMEOBJECT_POS_Y) << ", "
         << GetFloatValue(GAMEOBJECT_POS_Z) << ", "
@@ -734,10 +735,6 @@ bool GameObject::isVisibleForInState(Player const* u, bool inVisibleList) const
             if(check stuff here)
                 return false;
         }*/
-
-        // Smuggled Mana Cell required 10 invisibility type detection/state
-        if(GetEntry()==187039 && ((u->m_detectInvisibilityMask | u->m_invisibilityMask) & (1<<10))==0)
-            return false;
     }
 
     // check distance

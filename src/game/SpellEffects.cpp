@@ -583,6 +583,14 @@ void Spell::EffectSchoolDMG(uint32 effect_idx)
                                  m_caster->SpellBaseDamageBonusForVictim(GetSpellSchoolMask(m_spellInfo), unitTarget);
                     damage += int32(ap * 0.15f) + int32(holy * 15 / 100);
                 }
+                // Hammer of the Righteous
+                else if(m_spellInfo->SpellFamilyFlags&0x0004000000000000LL)
+                {
+                    // Add main hand dps * effect[2] amount
+                    float averange = (m_caster->GetFloatValue(UNIT_FIELD_MINDAMAGE) + m_caster->GetFloatValue(UNIT_FIELD_MAXDAMAGE)) / 2;
+                    int32 count = m_caster->CalculateSpellDamage(m_spellInfo, 2, m_spellInfo->EffectBasePoints[2], unitTarget);
+                    damage += count * int32(averange * 1000) / m_caster->GetAttackTime(BASE_ATTACK);
+                }
                 break;
             }
         }
@@ -774,14 +782,11 @@ void Spell::EffectDummy(uint32 i)
                     if(creatureTarget->isPet())
                         return;
 
-                    creatureTarget->setDeathState(JUST_DIED);
-                    creatureTarget->RemoveCorpse();
-                    creatureTarget->SetHealth(0);                   // just for nice GM-mode view
-
                     GameObject* pGameObj = new GameObject;
 
                     Map *map = creatureTarget->GetMap();
 
+                    // create before death for get proper coordinates
                     if(!pGameObj->Create(objmgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT), 179644, map, m_caster->GetPhaseMask(),
                         creatureTarget->GetPositionX(), creatureTarget->GetPositionY(), creatureTarget->GetPositionZ(),
                         creatureTarget->GetOrientation(), 0, 0, 0, 0, 100, 1) )
@@ -794,6 +799,10 @@ void Spell::EffectDummy(uint32 i)
                     pGameObj->SetOwnerGUID(m_caster->GetGUID() );
                     pGameObj->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel() );
                     pGameObj->SetSpellId(m_spellInfo->Id);
+
+                    creatureTarget->setDeathState(JUST_DIED);
+                    creatureTarget->RemoveCorpse();
+                    creatureTarget->SetHealth(0);                   // just for nice GM-mode view
 
                     DEBUG_LOG("AddObject at SpellEfects.cpp EffectDummy\n");
                     map->Add(pGameObj);
@@ -4928,14 +4937,15 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                     if (!unitTarget)
                         return;
                     // Refresh Shadow Word: Pain on target
-                    Unit::AuraList const &mPeriodic = unitTarget->GetAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
-                    for(Unit::AuraList::const_iterator i = mPeriodic.begin(); i != mPeriodic.end(); ++i)
+                    Unit::AuraMap& auras = unitTarget->GetAuras();
+                    for(Unit::AuraMap::iterator itr = auras.begin(); itr != auras.end(); ++itr)
                     {
-                        if( (*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST &&
-                            (*i)->GetSpellProto()->SpellFamilyFlags & 0x0000000000008000LL &&
-                            (*i)->GetCasterGUID()==m_caster->GetGUID() )
+                        SpellEntry const *spellInfo = (*itr).second->GetSpellProto();
+                        if( spellInfo->SpellFamilyName == SPELLFAMILY_PRIEST &&
+                            spellInfo->SpellFamilyFlags &  0x0000000000008000LL &&
+                            (*itr).second->GetCasterGUID() == m_caster->GetGUID())
                         {
-                            (*i)->RefreshAura();
+                            (*itr).second->RefreshAura();
                             return;
                         }
                     }
