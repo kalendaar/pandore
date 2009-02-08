@@ -22,7 +22,7 @@
 DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
-  `required_7230_02_mangos_spell_bonus_data` bit(1) default NULL
+  `required_7249_01_mangos_spell_proc_event` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -425,6 +425,7 @@ INSERT INTO `command` VALUES
 ('reload all_locales',3,'Syntax: .reload all_locales\r\n\r\nReload all `locales_*` tables with reload support added and that can be _safe_ reloaded.'),
 ('reload config',3,'Syntax: .reload config\r\n\r\nReload config settings (by default stored in mangosd.conf). Not all settings can be change at reload: some new setting values will be ignored until restart, some values will applied with delay or only to new objects/maps, some values will explicitly rejected to change at reload.'),
 ('repairitems',2,'Syntax: .repairitems\r\n\r\nRepair all selected player''s items.'),
+('reset achievements',3,'Syntax: .reset achievements [$playername]\r\n\r\nReset achievements data for selected or named (online or offline) character. Achievements for persistance progress data like completed quests/etc re-filled at reset. Achievements for events like kills/casts/etc will lost.'),
 ('reset all',3,'Syntax: .reset all spells\r\n\r\nSyntax: .reset all talents\r\n\r\nRequest reset spells or talents at next login each existed character.'),
 ('reset honor',3,'Syntax:\r\n.reset honor [Playername]\r\n  Reset all honor data for targeted character.'),
 ('reset level',3,'Syntax:\r\n.reset level [Playername]\r\n  Reset level to 1 including reset stats and talents.  Equipped items with greater level requirement can be lost.'),
@@ -17168,7 +17169,6 @@ INSERT INTO `spell_proc_event` VALUES
 (60132, 0x00000000, 15, 0x00000000, 0x08020000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (60170, 0x00000000,  5, 0x00000006, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (60172, 0x00000000,  5, 0x00040000, 0x00000000, 0x00000000, 0x00000000, 0x00010000, 0.000000, 0.000000,  0),
-(60200, 0x00000000, 15, 0x00001000, 0x00000000, 0x00000000, 0x00000000, 0x00010000, 0.000000, 0.000000,  0),
 (60493, 0x00000000,  0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000, 45),
 (60503, 0x00000000,  4, 0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (60537, 0x00000000,  0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002, 0.000000, 0.000000,  0),
@@ -17266,7 +17266,10 @@ INSERT INTO `spell_bonus_data` VALUES
 ('116', '0.8143', '0', '0', 'Mage - Frost Bolt'),
 ('11426', '0.8053', '0', '0', 'Mage - Ice Barrier'),
 ('30455', '0.1429', '0', '0', 'Mage - Ice Lance'),
-('19750', '0.4286', '0', '0', 'Paladin - Flash of Light'),
+('34913','0', '0', '0', 'Mage - Molten Armor Triggered Rank 1'),
+('43043','0', '0', '0', 'Mage - Molten Armor Triggered Rank 2'),
+('43044','0', '0', '0', 'Mage - Molten Armor Triggered Rank 3'),
+('19750','0.4286', '0', '0', 'Paladin - Flash of Light'),
 ('635', '0.7143', '0', '0', 'Paladin - Holy Light'),
 ('25912', '0.4286', '0', '0', 'Paladin - Holy Shock Triggered Hurt Rank 1'),
 ('25911', '0.4286', '0', '0', 'Paladin - Holy Shock Triggered Hurt Rank 2'),
