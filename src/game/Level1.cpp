@@ -391,10 +391,25 @@ bool ChatHandler::HandleNamegoCommand(const char* args)
 
         if(pMap->IsBattleGroundOrArena())
         {
-            // cannot summon to bg
-            PSendSysMessage(LANG_CANNOT_SUMMON_TO_BG,nameLink.c_str());
-            SetSentErrorMessage(true);
-            return false;
+            // only allow if gm mode is on
+            if (!chr->isGameMaster())
+            {
+                PSendSysMessage(LANG_CANNOT_GO_TO_BG_GM,chr->GetName());
+                SetSentErrorMessage(true);
+                return false;
+            }
+            // if both players are in different bgs
+            else if (chr->GetBattleGroundId() && m_session->GetPlayer()->GetBattleGroundId() != chr->GetBattleGroundId())
+            {
+                PSendSysMessage(LANG_CANNOT_GO_TO_BG_FROM_BG,chr->GetName());
+                SetSentErrorMessage(true);
+                return false;
+            }
+            // all's well, set bg id
+            // when porting out from the bg, it will be reset to 0
+            chr->SetBattleGroundId(m_session->GetPlayer()->GetBattleGroundId());
+            // remember current position as entry point for return at bg end teleportation
+            chr->SetBattleGroundEntryPoint(chr->GetMapId(),chr->GetPositionX(),chr->GetPositionY(),chr->GetPositionZ(),chr->GetOrientation());
         }
         else if(pMap->IsDungeon())
         {
@@ -501,8 +516,8 @@ bool ChatHandler::HandleGonameCommand(const char* args)
                 SetSentErrorMessage(true);
                 return false;
             }
-            // if already in a bg, don't let port to other
-            else if (_player->GetBattleGroundId())
+            // if both players are in different bgs
+            else if (_player->GetBattleGroundId() && _player->GetBattleGroundId() != chr->GetBattleGroundId())
             {
                 PSendSysMessage(LANG_CANNOT_GO_TO_BG_FROM_BG,chrNameLink.c_str());
                 SetSentErrorMessage(true);
@@ -511,10 +526,10 @@ bool ChatHandler::HandleGonameCommand(const char* args)
             // all's well, set bg id
             // when porting out from the bg, it will be reset to 0
             _player->SetBattleGroundId(chr->GetBattleGroundId());
+            // remember current position as entry point for return at bg end teleportation
+            _player->SetBattleGroundEntryPoint(_player->GetMapId(),_player->GetPositionX(),_player->GetPositionY(),_player->GetPositionZ(),_player->GetOrientation());
         }
-        else if(cMap->IsDungeon())
-        Map* cMap = chr->GetMap();
-        if(cMap->Instanceable())
+        else if(cMap->IsDungeon() && cMap->Instanceable())
         {
             // we have to go to instance, and can go to player only if:
             //   1) we are in his group (either as leader or as member)
