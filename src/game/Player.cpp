@@ -2308,11 +2308,11 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, 0.0f );
     SetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, 0.0f );
 
-    SetUInt32Value(UNIT_FIELD_ATTACK_POWER,            0 );
-    SetUInt32Value(UNIT_FIELD_ATTACK_POWER_MODS,       0 );
+    SetInt32Value(UNIT_FIELD_ATTACK_POWER,            0 );
+    SetInt32Value(UNIT_FIELD_ATTACK_POWER_MODS,       0 );
     SetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER,0.0f);
-    SetUInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER,     0 );
-    SetUInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS,0 );
+    SetInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER,     0 );
+    SetInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS,0 );
     SetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER,0.0f);
 
     // Base crit values (will be recalculated in UpdateAllStats() at loading and in _ApplyAllStatBonuses() at reset
@@ -6728,6 +6728,7 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
                 break;
             case ITEM_MOD_ATTACK_POWER:
                 HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
+                HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
                 break;
             case ITEM_MOD_RANGED_ATTACK_POWER:
                 HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
@@ -6803,6 +6804,14 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
     {
         damage = apply ? proto->Damage[0].DamageMax : BASE_MAXDAMAGE;
         SetBaseWeaponDamage(attType, MAXDAMAGE, damage);
+    }
+
+    // Druids get feral AP bonus from weapon dps
+    if(getClass() == CLASS_DRUID)
+    {
+        int32 feral_bonus = proto->getFeralBonus();
+        if (feral_bonus > 0)
+            ApplyFeralAPBonus(feral_bonus, apply);
     }
 
     if(!IsUseEquipedWeapon(slot==EQUIPMENT_SLOT_MAINHAND))
@@ -12033,6 +12042,7 @@ void Player::ApplyEnchantment(Item *item,EnchantmentSlot slot,bool apply, bool a
                         break;
                     case ITEM_MOD_ATTACK_POWER:
                         HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
+                        HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
                         sLog.outDebug("+ %u ATTACK_POWER", enchant_amount);
                         break;
                     case ITEM_MOD_RANGED_ATTACK_POWER:
@@ -14162,7 +14172,8 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
         SetBattleGroundEntryPoint(fields[36].GetUInt32(),fields[37].GetFloat(),fields[38].GetFloat(),fields[39].GetFloat(),fields[40].GetFloat());
 
         // check entry point and fix to homebind if need
-        if(!MapManager::IsValidMapCoord(m_bgEntryPoint))
+        MapEntry const* mapEntry = sMapStore.LookupEntry(m_bgEntryPoint.mapid);
+        if(!mapEntry || mapEntry->Instanceable() || !MapManager::IsValidMapCoord(m_bgEntryPoint))
             SetBattleGroundEntryPoint(m_homebindMapId,m_homebindX,m_homebindY,m_homebindZ,0.0f);
 
         BattleGround *currentBg = sBattleGroundMgr.GetBattleGround(bgid);
@@ -14193,8 +14204,10 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
             // return to BG master
             SetMapId(fields[36].GetUInt32());
             Relocate(fields[37].GetFloat(),fields[38].GetFloat(),fields[39].GetFloat(),fields[40].GetFloat());
+
             // check entry point and fix to homebind if need
-            if(!IsPositionValid())
+            mapEntry = sMapStore.LookupEntry(GetMapId());
+            if(!mapEntry || mapEntry->IsBattleGroundOrArena() || !IsPositionValid())
                 RelocateToHomebind();
         }
     }
