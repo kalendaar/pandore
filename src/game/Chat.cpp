@@ -597,9 +597,9 @@ ChatCommand * ChatHandler::getCommandTable()
         { "sendmessage",    SEC_ADMINISTRATOR,  true,  &ChatHandler::HandleSendMessageCommand,         "", NULL },
         { "repairitems",    SEC_GAMEMASTER,     false, &ChatHandler::HandleRepairitemsCommand,         "", NULL },
         { "waterwalk",      SEC_GAMEMASTER,     false, &ChatHandler::HandleWaterwalkCommand,           "", NULL },
-        { "freeze",         SEC_ADMINISTRATOR,  false  &ChatHandler::HandleFreezeCommand,              "", NULL },
-        { "unfreeze",       SEC_ADMINISTRATOR,  false  &ChatHandler::HandleUnFreezeCommand,            "", NULL },
-        { "listfreeze",     SEC_ADMINISTRATOR,  false  &ChatHandler::HandleListFreezeCommand,          "", NULL },
+        { "freeze",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleFreezeCommand,              "", NULL },
+        { "unfreeze",       SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnFreezeCommand,            "", NULL },
+        { "listfreeze",     SEC_ADMINISTRATOR,  false, &ChatHandler::HandleListFreezeCommand,          "", NULL },
 
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
