@@ -60,7 +60,6 @@
 #include "WaypointManager.h"
 #include "GMTicketMgr.h"
 #include "Util.h"
-#include "AuctionHouseBot.h"
 
 INSTANTIATE_SINGLETON_1( World );
 

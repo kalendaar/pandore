@@ -310,10 +310,10 @@ void WorldSession::HandleLogoutRequestOpcode( WorldPacket & /*recv_data*/ )
 				sWorld.SendWorldText(LANG_GMLOGOUT_DBG, GetPlayer()->GetName());
 			break;
 			case 4:
-				sWorld.SendWorldText(LANG_GMLOGOUT_ADM, GetPlayer()->GetName());
+				sWorld.SendWorldText(LANG_GMLOGOUT_COA, GetPlayer()->GetName());
 			break;
 			case 5:
-				sWorld.SendWorldText(LANG_GMLOGOUT_SYS, GetPlayer()->GetName());
+				sWorld.SendWorldText(LANG_GMLOGOUT_ADM, GetPlayer()->GetName());
 			break;
 			}
 		sLog.outBasic("MJ '%s' déconnecté et annoncé",GetPlayer()->GetName());

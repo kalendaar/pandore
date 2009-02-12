@@ -853,10 +853,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 			sWorld.SendWorldText(LANG_GMLOGIN_DBG, pCurrChar->GetName());
 		break;
 		case 4:
-			sWorld.SendWorldText(LANG_GMLOGIN_ADM, pCurrChar->GetName());
+			sWorld.SendWorldText(LANG_GMLOGIN_COA, pCurrChar->GetName());
 		break;
 		case 5:
-			sWorld.SendWorldText(LANG_GMLOGIN_SYS, pCurrChar->GetName());
+			sWorld.SendWorldText(LANG_GMLOGIN_ADM, pCurrChar->GetName());
 		break;
 		}
 			sLog.outBasic("MJ '%s' connecté et annoncé",pCurrChar->GetName());
