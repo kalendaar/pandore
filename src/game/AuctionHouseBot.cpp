@@ -16,7 +16,7 @@ using namespace std;
 
 static bool debug_Out = 0;
 
-static string AHBotRev =  "$Revision: 143$";
+static string AHBotRev =  "$Revision: 144$";
 static vector<uint32> npcItems;
 static vector<uint32> lootItems;
 static vector<uint32> whiteTradeGoods;
@@ -63,7 +63,7 @@ static void addNewAuctions(Player *AHBplayer, AHBConfig *config)
 {
     if (!AHBSeller)
         return;
-    AuctionHouseObject* auctionHouse = objmgr.GetAuctionsMap(AuctionLocation(config->GetAHID()));
+    AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap(AuctionLocation(config->GetAHID()));
     uint32 items = 0;
     uint32 minItems = config->GetMinItems();
     uint32 maxItems = config->GetMaxItems();
@@ -99,7 +99,7 @@ static void addNewAuctions(Player *AHBplayer, AHBConfig *config)
     for (AuctionHouseObject::AuctionEntryMap::iterator itr = auctionHouse->GetAuctionsBegin();itr != auctionHouse->GetAuctionsEnd();++itr)
     {
         AuctionEntry *Aentry = itr->second;
-        Item *item = objmgr.GetAItem(Aentry->item_guidlow);
+        Item *item = auctionmgr.GetAItem(Aentry->item_guidlow);
         if( item )
         {
             ItemPrototype const *prototype = item->GetProto();
@@ -233,7 +233,7 @@ static void addNewAuctions(Player *AHBplayer, AHBConfig *config)
             }
         }
 
-        ItemPrototype const* prototype = objmgr.GetItemPrototype(itemID);
+        ItemPrototype const* prototype = auctionmgr.GetItemPrototype(itemID);
         if (prototype == NULL)
         {
          sLog.outString("AuctionHouseBot: Huh?!?! prototype == NULL");
@@ -319,7 +319,7 @@ static void addNewAuctions(Player *AHBplayer, AHBConfig *config)
         item->SetCount(stackCount);
 
         AuctionEntry* auctionEntry = new AuctionEntry;
-        auctionEntry->Id = objmgr.GenerateAuctionID();
+        auctionEntry->Id = auctionmgr.GenerateAuctionID();
         auctionEntry->auctioneer = 0;
         auctionEntry->item_guidlow = item->GetGUIDLow();
         auctionEntry->item_template = item->GetEntry();
@@ -333,7 +333,7 @@ static void addNewAuctions(Player *AHBplayer, AHBConfig *config)
         auctionEntry->time = (time_t) (urand(config->GetMinTime(), config->GetMaxTime()) * 60 * 60 + time(NULL));
         item->SaveToDB();
         item->RemoveFromUpdateQueueOf(AHBplayer);
-        objmgr.AddAItem(item);
+        auctionmgr.AddAItem(item);
         auctionHouse->AddAuction(auctionEntry);
 
         CharacterDatabase.PExecute("INSERT INTO `auctionhouse` (`id`,"
@@ -363,7 +363,7 @@ static void addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, World
         return;
 
         // Fetches content of selected AH
-   AuctionHouseObject* auctionHouse = objmgr.GetAuctionsMap(AuctionLocation(config->GetAHID()));
+   AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap(AuctionLocation(config->GetAHID()));
    AuctionHouseObject::AuctionEntryMap::iterator itr;
 
    itr = auctionHouse->GetAuctionsBegin();
@@ -400,7 +400,7 @@ static void addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, World
    AuctionEntry* auction = auctionHouse->GetAuction(auctionID);
 
         // get exact item information
-   Item *pItem = objmgr.GetAItem(auction->item_guidlow);
+   Item *pItem = auctionmgr.GetAItem(auction->item_guidlow);
    if (!pItem)
    {
       sLog.outError("Item doesn't exists, perhaps bought already?");
@@ -408,7 +408,7 @@ static void addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, World
    }
 
         // get item prototype
-   ItemPrototype const* prototype = objmgr.GetItemPrototype(auction->item_template);
+   ItemPrototype const* prototype = auctionmgr.GetItemPrototype(auction->item_template);
 
         // check which price we have to use, startbid or if it is bidded already
     if(debug_Out)
@@ -565,9 +565,9 @@ static void addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, World
     {sLog.outError("bidprice: %u", bidprice);}
 
       // Check our bid is high enough to be valid. If not, correct it to minimum.
-   if((currentprice + objmgr.GetAuctionOutBid(currentprice)) > bidprice)
+   if((currentprice + auctionmgr.GetAuctionOutBid(currentprice)) > bidprice)
    {
-      bidprice = currentprice + objmgr.GetAuctionOutBid(currentprice);
+      bidprice = currentprice + auctionmgr.GetAuctionOutBid(currentprice);
         if(debug_Out)
         {sLog.outError("bidprice(>): %u", bidprice);}
    }
@@ -615,11 +615,11 @@ static void addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, World
       auction->bid = auction->buyout;
 
          // Send mails to buyer & seller
-      objmgr.SendAuctionSuccessfulMail( auction );
-      objmgr.SendAuctionWonMail( auction );
+      auctionmgr.SendAuctionSuccessfulMail( auction );
+      auctionmgr.SendAuctionWonMail( auction );
 
          // Remove item from auctionhouse
-      objmgr.RemoveAItem(auction->item_guidlow);
+      auctionmgr.RemoveAItem(auction->item_guidlow);
          // Remove auction
       auctionHouse->RemoveAuction(auction->Id);
          // Remove from database
@@ -750,7 +750,7 @@ void AuctionHouseBotInit()
 
         for (uint32 itemID = 0; itemID < sItemStorage.MaxEntry; itemID++)
         {
-            ItemPrototype const* prototype = objmgr.GetItemPrototype(itemID);
+            ItemPrototype const* prototype = auctionmgr.GetItemPrototype(itemID);
 
             if (prototype == NULL)
              continue;
@@ -948,7 +948,7 @@ void AuctionHouseBotCommands(uint32 command, uint32 ahMapID, uint32 col, char* a
     {
     case 0:     //ahexpire
         {
-            AuctionHouseObject* auctionHouse = objmgr.GetAuctionsMap(AuctionLocation(ahMapID));
+            AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap(AuctionLocation(ahMapID));
 
             AuctionHouseObject::AuctionEntryMap::iterator itr;
             itr = auctionHouse->GetAuctionsBegin();
